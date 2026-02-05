@@ -1,0 +1,51 @@
+{
+  "name": "nitminer",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "setup:puppeteer": "npx puppeteer install"
+  },
+  "dependencies": {
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-slot": "^1.2.4",
+    "bcryptjs": "^3.0.3",
+    "class-variance-authority": "^0.7.1",
+    "cloudinary": "^1.41.0",
+    "clsx": "^2.1.1",
+    "embla-carousel": "^8.6.0",
+    "embla-carousel-autoplay": "^8.6.0",
+    "embla-carousel-react": "^8.6.0",
+    "jose": "^6.1.3",
+    "jsdom": "^28.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "lucide-react": "^0.563.0",
+    "mongoose": "^9.1.5",
+    "next": "16.1.4",
+    "next-auth": "^4.24.13",
+    "next-themes": "^0.4.6",
+    "node-cron": "^4.2.1",
+    "nodemailer": "^7.0.13",
+    "puppeteer-core": "^22.15.0",
+    "qrcode": "^1.5.4",
+    "razorpay": "^2.9.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-icons": "^5.5.0",
+    "react-markdown": "^10.1.0",
+    "recharts": "^3.7.0",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/react": "19.2.10",
+    "babel-plugin-react-compiler": "1.0.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.4",
+    "tailwindcss": "^4"
+  }
+}
