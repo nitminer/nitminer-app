@@ -436,14 +436,76 @@ export async function generateHTMLPDFReceiptBuffer(data: ReceiptData): Promise<B
     const htmlContent = generateReceiptHTML(data, qrCodeDataUrl);
 
     // Launch browser with puppeteer-core
-    browser = await puppeteer.launch({
+    const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+    
+    const launchOptions: any = {
       headless: true,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
       ],
-    });
+    };
+
+    // Vercel has Chrome pre-installed, use it directly
+    if (isProduction) {
+      launchOptions.channel = 'chrome';
+    } else {
+      // For local dev, look for Chrome in puppeteer cache or system locations
+      const path = require('path');
+      const os = require('os');
+      const fs = require('fs');
+      
+      let chromePath: string | undefined;
+      const cacheDir = path.join(os.homedir(), '.cache/puppeteer/chrome');
+
+      // Try to find latest Chrome in puppeteer cache
+      if (fs.existsSync(cacheDir)) {
+        try {
+          const versions = fs.readdirSync(cacheDir).sort().reverse();
+          for (const version of versions) {
+            const versionPath = path.join(cacheDir, version);
+            // Find any chrome-* subdirectory
+            const subdirs = fs.readdirSync(versionPath);
+            for (const subdir of subdirs) {
+              const appDir = path.join(versionPath, subdir, 'Google Chrome for Testing.app', 'Contents', 'MacOS', 'Google Chrome for Testing');
+              if (fs.existsSync(appDir)) {
+                chromePath = appDir;
+                break;
+              }
+            }
+            if (chromePath) break;
+          }
+        } catch (e) {
+          console.warn('⚠️ Failed to find Chrome in puppeteer cache:', e);
+        }
+      }
+
+      // Fallback system Chrome locations
+      if (!chromePath) {
+        const systemPaths = [
+          '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', // macOS
+          '/usr/bin/google-chrome', // Linux
+          'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', // Windows
+        ];
+        for (const p of systemPaths) {
+          if (fs.existsSync(p)) {
+            chromePath = p;
+            break;
+          }
+        }
+      }
+
+      if (chromePath) {
+        launchOptions.executablePath = chromePath;
+        console.log('🌐 Using Chrome at:', chromePath);
+      } else {
+        console.log('⚠️ Chrome not found, using system Chrome channel');
+        launchOptions.channel = 'chrome';
+      }
+    }
+
+    browser = await puppeteer.launch(launchOptions);
 
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
