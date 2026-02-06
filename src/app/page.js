@@ -8,6 +8,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50 font-sans dark:bg-black">
       <Header />
+      
       <main className="flex flex-1 w-full flex-col items-center justify-start bg-white dark:bg-black">
 
         {/* <section className="w-full">
@@ -15,7 +16,7 @@ export default function Home() {
         </section> */}
         {/* Hero Section */}
         <section className="w-full">
-          <HeroComponent />
+          {/* <HeroComponent /> */}
         </section>
 
         {/* Carousel Section - Commented Out */}
