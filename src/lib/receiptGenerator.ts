@@ -66,66 +66,104 @@ function generateReceiptHTML(data: ReceiptData, qrCodeDataUrl: string): string {
                 font-family: 'Courier Prime', 'Courier New', monospace;
                 background: white;
                 padding: 0;
-                font-size: 14px;
-                line-height: 1.6;
+                font-size: 13px;
+                line-height: 1.4;
             }
 
             .receipt {
                 width: 100%;
                 max-width: 210mm;
+                height: 297mm;
                 background: white;
-                padding: 30mm 20mm;
-                margin: 0;
-                min-height: 297mm;
+                padding: 15mm 20mm;
+                margin: 0 auto;
+                position: relative;
+                overflow: hidden;
+            }
+
+            .qr-code {
+                position: absolute;
+                top: 15mm;
+                right: 20mm;
+                z-index: 10;
+            }
+
+            .qr-code img {
+                width: 100px;
+                height: 100px;
+                border: 2px solid #ddd;
+                padding: 5px;
+                background: white;
+            }
+
+            .main-content {
+                max-width: calc(100% - 0px);
             }
 
             .header {
                 text-align: center;
-                margin-bottom: 20px;
-                padding-bottom: 15px;
-                border-bottom: 2px dashed #333;
+                margin-bottom: 15px;
+                padding-bottom: 5px;
+                border-bottom: 1px dashed #333;
+            }
+
+            .logo-container {
+                text-align: center;
+                margin-bottom: 10px;
+            }
+
+            .logo {
+                width: 60px;
+                height: 60px;
+                margin: 0 auto 5px;
+            }
+
+            .logo img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain;
             }
 
             .company-name {
-                font-size: 32px;
+                font-size: 24px;
                 font-weight: bold;
-                letter-spacing: 3px;
-                margin-bottom: 8px;
+                letter-spacing: 2px;
+                margin-bottom: 5px;
             }
 
             .company-details {
-                font-size: 14px;
+                font-size: 12px;
                 color: #555;
-                margin: 3px 0;
+                margin: 2px 0;
             }
 
             .receipt-title {
                 text-align: center;
-                font-size: 24px;
+                font-size: 20px;
                 font-weight: bold;
-                margin: 20px 0;
+                margin: 15px 0 10px 0;
                 letter-spacing: 2px;
             }
 
             .divider {
                 border-top: 1px dashed #333;
-                margin: 15px 0;
+                margin: 10px 0;
             }
 
             .double-divider {
                 border-top: 3px solid #333;
-                margin: 15px 0;
+                margin: 10px 0;
             }
 
             .receipt-info {
-                margin: 15px 0;
+                margin: 10px 0;
             }
 
             .info-row {
                 display: flex;
                 justify-content: space-between;
-                margin: 8px 0;
-                font-size: 14px;
+                margin: 5px 0;
+                font-size: 13px;
             }
 
             .info-label {
@@ -139,25 +177,25 @@ function generateReceiptHTML(data: ReceiptData, qrCodeDataUrl: string): string {
 
             .section-title {
                 font-weight: bold;
-                font-size: 16px;
-                margin: 15px 0 8px 0;
+                font-size: 14px;
+                margin: 10px 0 5px 0;
                 text-transform: uppercase;
-                letter-spacing: 2px;
+                letter-spacing: 1.5px;
             }
 
             .customer-section {
                 background: #f9f9f9;
-                padding: 15px;
+                padding: 10px;
                 border: 2px solid #ddd;
-                margin: 15px 0;
+                margin: 10px 0;
             }
 
             .item-row {
                 display: flex;
                 justify-content: space-between;
-                margin: 8px 0;
+                margin: 5px 0;
                 padding: 5px 0;
-                font-size: 14px;
+                font-size: 13px;
             }
 
             .item-desc {
@@ -171,76 +209,21 @@ function generateReceiptHTML(data: ReceiptData, qrCodeDataUrl: string): string {
             }
 
             .total-section {
-                margin-top: 20px;
-                padding-top: 15px;
+                margin-top: 15px;
+                padding-top: 10px;
                 border-top: 3px solid #333;
-            }
-
-            .total-row {
-                display: flex;
-                justify-content: space-between;
-                margin: 8px 0;
-                font-size: 20px;
-                font-weight: bold;
-            }
-
-            .total-label {
-                letter-spacing: 2px;
-            }
-
-            .total-amount {
-                font-size: 24px;
-            }
-
-            .footer {
-                margin-top: 30px;
-                padding-top: 15px;
-                border-top: 2px dashed #333;
-                text-align: center;
-            }
-
-            .thank-you {
-                font-size: 18px;
-                font-weight: bold;
-                margin: 15px 0;
-                letter-spacing: 2px;
-            }
-
-            .footer-text {
-                font-size: 12px;
-                color: #666;
-                margin: 5px 0;
-            }
-
-            .barcode {
-                text-align: center;
-                margin: 20px 0;
-                font-family: 'Inconsolata', monospace;
-                font-size: 14px;
-                letter-spacing: 3px;
-            }
-
-            .status-paid {
-                text-align: center;
-                margin: 15px 0;
-                padding: 10px;
-                border: 3px solid #000;
-                font-weight: bold;
-                font-size: 18px;
-                letter-spacing: 3px;
+                position: relative;
             }
 
             .stamp-container {
-                position: relative;
-                margin: 30px 0;
+                position: absolute;
+                right: -10px;
+                top: -40px;
             }
 
             .stamp {
-                position: absolute;
-                right: 0px;
-                top: -80px;
-                width: 200px;
-                height: 150px;
+                width: 150px;
+                height: 110px;
                 transform: rotate(-15deg);
             }
 
@@ -250,163 +233,221 @@ function generateReceiptHTML(data: ReceiptData, qrCodeDataUrl: string): string {
                 object-fit: contain;
             }
 
-            .logo-container {
-                text-align: center;
-                margin-bottom: 15px;
+            .paid-stamp-container {
+                position: absolute;
+                right: 50%;
+                top: 50%;
+                transform: translate(50%, -50%) rotate(-20deg);
+                z-index: 0;
             }
 
-            .logo {
-                width: 80px;
-                height: 80px;
-                margin: 0 auto 10px;
+            .paid-stamp {
+                width: 180px;
+                height: 180px;
+                opacity: 0.7;
             }
 
-            .logo img {
+            .paid-stamp img {
                 width: 100%;
                 height: 100%;
                 object-fit: contain;
             }
 
-            .qr-code {
-                text-align: center;
-                margin: 20px 0;
+            .total-row {
+                display: flex;
+                justify-content: space-between;
+                margin: 5px 0;
+                font-size: 18px;
+                font-weight: bold;
             }
 
-            .qr-code img {
-                width: 150px;
-                height: 150px;
-                border: 2px solid #ddd;
-                padding: 10px;
+            .total-label {
+                letter-spacing: 2px;
+            }
+
+            .total-amount {
+                font-size: 22px;
+            }
+
+            .status-paid {
+                text-align: center;
+                margin: 10px 0;
+                padding: 8px;
+                border: 3px solid #000;
+                font-weight: bold;
+                font-size: 16px;
+                letter-spacing: 3px;
+            }
+
+            .barcode {
+                text-align: center;
+                margin: 15px 0 10px 0;
+                font-family: 'Inconsolata', monospace;
+                font-size: 12px;
+                letter-spacing: 2px;
+            }
+
+            .footer {
+                margin-top: 15px;
+                padding-top: 10px;
+                border-top: 2px dashed #333;
+                text-align: center;
+            }
+
+            .thank-you {
+                font-size: 16px;
+                font-weight: bold;
+                margin: 10px 0;
+                letter-spacing: 2px;
+            }
+
+            .footer-text {
+                font-size: 11px;
+                color: #666;
+                margin: 3px 0;
+            }
+
+            @media print {
+                body {
+                    margin: 0;
+                    padding: 0;
+                }
+                .receipt {
+                    margin: 0;
+                    padding: 15mm 20mm;
+                }
             }
         </style>
     </head>
     <body>
         <div class="receipt">
-            <!-- Logo -->
-            <div class="logo-container">
-                <div class="logo">
-                    <img src="https://nitminer.vercel.app/_next/image?url=https%3A%2F%2Fnitminer.com%2Flogo_img%2Flogo-rbg.png&w=128&q=75" alt="TrustInn Logo">
-                </div>
-            </div>
-
-            <!-- Header -->
-            <div class="header">
-                <div class="company-name">NITMINER</div>
-                <div class="company-details">Premium Tool Platform</div>
-                <div class="company-details">www.trustinn.com</div>
-                <div class="company-details">support@nitminer.com</div>
-            </div>
-
-            <!-- Receipt Title -->
-            <div class="receipt-title">PAYMENT RECEIPT</div>
-
-            <div class="divider"></div>
-
-            <!-- Receipt Info -->
-            <div class="receipt-info">
-                <div class="info-row">
-                    <span class="info-label">Receipt No:</span>
-                    <span class="info-value">${data.receiptNumber}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Date:</span>
-                    <span class="info-value">${data.receiptDate}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Time:</span>
-                    <span class="info-value">${receiptTime}</span>
-                </div>
-            </div>
-
-            <div class="divider"></div>
-
-            <!-- Customer Information -->
-            <div class="section-title">Customer</div>
-            <div class="customer-section">
-                <div class="info-row">
-                    <span class="info-label">Name:</span>
-                    <span class="info-value">${data.customerName}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Email:</span>
-                    <span class="info-value">${data.customerEmail}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Customer ID:</span>
-                    <span class="info-value">${data.customerId.substring(0, 8).toUpperCase()}</span>
-                </div>
-            </div>
-
-            <div class="divider"></div>
-
-            <!-- Items -->
-            <div class="section-title">Items</div>
-            <div class="item-row">
-                <div class="item-desc">${data.serviceDescription}</div>
-                <div class="item-amount">₹${formattedAmount}</div>
-            </div>
-
-            <div class="divider"></div>
-
-            <!-- Payment Details -->
-            <div class="section-title">Payment Info</div>
-            <div class="info-row">
-                <span class="info-label">Method:</span>
-                <span class="info-value">${data.paymentMethod}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Transaction ID:</span>
-                <span class="info-value">${data.transactionId}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Service Period:</span>
-                <span class="info-value">${data.serviceStartDate} to ${data.serviceEndDate}</span>
-            </div>
-
-            <div class="double-divider"></div>
-
-            <!-- Total -->
-            <div class="total-section">
-                <div class="stamp-container">
-                    <div class="stamp">
-                        <img src="https://res.cloudinary.com/dkg81hfgd/image/upload/v1770312595/stamp-sign-removebg-preview_e9sslr.png" alt="Official Stamp">
-                    </div>
-                </div>
-                <div class="total-row">
-                    <span class="total-label">TOTAL PAID</span>
-                    <span class="total-amount">₹${formattedAmount}</span>
-                </div>
-            </div>
-
-            <div class="divider"></div>
-
-            <!-- Status -->
-            <div class="status-paid">PAID</div>
-
-            <!-- QR Code -->
+            <!-- QR Code in Top Right -->
             <div class="qr-code">
                 <img src="${qrCodeDataUrl}" alt="Transaction QR Code">
             </div>
 
-            <!-- Barcode -->
-            <div class="barcode">
-                ||||| |||| ||||| || ||| ||||| ||<br>
-                * TI-${Date.now()}-${data.customerId.substring(0, 6).toUpperCase()} *
-            </div>
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Logo -->
+                <div class="logo-container">
+                    <div class="logo">
+                        <img src="https://res.cloudinary.com/dmpkp1nxv/image/upload/v1770376358/logo_evvxuk.png" alt="TrustInn Logo">
+                    </div>
+                </div>
 
-            <div class="divider"></div>
+                <!-- Header -->
+                <div class="header">
+                    <div class="company-name">NITMINER</div>
+                    <div class="company-details">Premium Tool Platform</div>
+                    <div class="company-details">www.trustinn.com | <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="c8bbbdb8b8a7babc88a6a1bca5a1a6adbae6aba7a5">[email&#160;protected]</a></div>
+                </div>
 
-            <!-- Footer -->
-            <div class="footer">
-                <div class="thank-you">THANK YOU!</div>
-                <div class="footer-text">This is an official payment receipt</div>
-                <div class="footer-text">Your premium access is now active</div>
-                <div class="footer-text">────────────────────────────────</div>
-                <div class="footer-text">For support, contact: support@nitminer.com</div>
-            </div>
-        </div>
-    </body>
-    </html>
+                <!-- Receipt Title -->
+                <div class="receipt-title">PAYMENT RECEIPT</div>
+
+                <div class="divider"></div>
+
+                <!-- Receipt Info -->
+                <div class="receipt-info">
+                    <div class="info-row">
+                        <span class="info-label">Receipt No:</span>
+                        <span class="info-value">${data.receiptNumber}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Date:</span>
+                        <span class="info-value">${data.receiptDate}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Time:</span>
+                        <span class="info-value">${receiptTime}</span>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <!-- Customer Information -->
+                <div class="section-title">Customer</div>
+                <div class="customer-section">
+                    <div class="info-row">
+                        <span class="info-label">Name:</span>
+                        <span class="info-value">${data.customerName}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Email:</span>
+                        <span class="info-value">${data.customerEmail}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Customer ID:</span>
+                        <span class="info-value">${data.customerId.substring(0, 8).toUpperCase()}</span>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <!-- Items -->
+                <div class="section-title">Items</div>
+                <div class="item-row">
+                    <div class="item-desc">${data.serviceDescription}</div>
+                    <div class="item-amount">₹${formattedAmount}</div>
+                </div>
+
+                <div class="divider"></div>
+
+                <!-- Payment Details -->
+                <div class="section-title">Payment Info</div>
+                <div class="info-row">
+                    <span class="info-label">Method:</span>
+                    <span class="info-value">${data.paymentMethod}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Transaction ID:</span>
+                    <span class="info-value">${data.transactionId}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Service Period:</span>
+                    <span class="info-value">${data.serviceStartDate} to ${data.serviceEndDate}</span>
+                </div>
+
+                <div class="double-divider"></div>
+
+                <!-- Total -->
+                <div class="total-section">
+                    <div class="paid-stamp-container">
+                        <div class="paid-stamp">
+                            <img src="https://res.cloudinary.com/dmpkp1nxv/image/upload/v1770378055/paid-stamp_hrmmuk.png" alt="Paid Stamp">
+                        </div>
+                    </div>
+                    <div class="stamp-container">
+                        <div class="stamp">
+                            <img src="https://res.cloudinary.com/dkg81hfgd/image/upload/v1770312595/stamp-sign-removebg-preview_e9sslr.png" alt="Official Stamp">
+                        </div>
+                    </div>
+                    <div class="total-row">
+                        <span class="total-label">TOTAL PAID</span>
+                        <span class="total-amount">₹${formattedAmount}</span>
+                    </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <!-- Status -->
+                <div class="status-paid">PAID</div>
+
+                <!-- Barcode -->
+                <div class="barcode">
+                    ||||| |||| ||||| || ||| ||||| ||<br>
+                    * TI-${Date.now()}-${data.customerId.substring(0, 6).toUpperCase()} *
+                </div>
+
+                <div class="divider"></div>
+
+                <!-- Footer -->
+                <div class="footer">
+                    <div class="thank-you">THANK YOU!</div>
+                    <div class="footer-text">This is an official payment receipt</div>
+                    <div class="footer-text">Your premium access is now active</div>
+                    <div class="footer-text">────────────────────────────────</div>
+                    <div class="footer-text">
   `;
 }
 

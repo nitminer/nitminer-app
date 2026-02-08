@@ -47,6 +47,14 @@ export function AboutUsDropdown() {
           >
             Publications
           </Link>
+          <hr className="my-2 border-gray-200 dark:border-gray-700" />
+          <Link
+            href="/downloads"
+            className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-black dark:hover:text-white transition-colors font-bold text-blue-600 dark:text-blue-400"
+            style={{ fontFamily: 'var(--font-space-grotesk), sans-serif' }}
+          >
+            📥 Download App
+          </Link>
         </div>
       )}
     </div>

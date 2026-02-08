@@ -4,6 +4,12 @@ export interface IOTP extends Document {
   email: string;
   otp: string;
   expiresAt: Date;
+  signupData?: {
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    password?: string;
+  };
   createdAt: Date;
 }
 
@@ -23,6 +29,15 @@ const otpSchema = new Schema<IOTP>(
       type: Date,
       required: true,
       default: () => new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+    },
+    signupData: {
+      type: {
+        firstName: String,
+        lastName: String,
+        phone: String,
+        password: String,
+      },
+      default: {},
     },
   },
   {

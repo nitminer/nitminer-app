@@ -10,6 +10,8 @@ declare module 'next-auth' {
     user: {
       id: string;
       role: string;
+      isPremium?: boolean;
+      trialCount?: number;
     } & DefaultSession['user'];
   }
 }
@@ -117,20 +119,12 @@ export const authOptions: NextAuthOptions = {
       // Allow sign in for all users
       return true;
     },
-    async redirect({ url, baseUrl }) {
-      // If the URL is relative, prepend the base URL
-      if (url.startsWith('/')) return `${baseUrl}${url}`;
-
-      // If the URL is already absolute, allow it
-      if (new URL(url).origin === baseUrl) return url;
-
-      // Default to home page
-      return baseUrl;
-    },
     async jwt({ token, user, account }: any) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.email = user.email; // CRITICAL: Store email in token so it's available in session
+        console.log('JWT callback - user provided:', { id: user.id, role: user.role, email: user.email });
       }
 
       // Handle legacy "demo-admin" ID in existing tokens
@@ -177,6 +171,7 @@ export const authOptions: NextAuthOptions = {
 
           token.id = dbUser._id.toString();
           token.role = dbUser.role;
+          token.email = dbUser.email; // Store email from database user
         } catch (error) {
           console.error('Google auth error:', error);
           // Don't fail the auth, just use default values
@@ -186,30 +181,74 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }: any) {
-      if (session.user) {
-        // Handle legacy "demo-admin" ID
-        if (token.id === 'demo-admin') {
-          try {
-            await dbConnect();
-            const adminUser = await User.findOne({ email: 'admin@nitminer.com' });
-            if (adminUser) {
-              session.user.id = adminUser._id.toString();
-              session.user.role = adminUser.role;
-            } else {
-              // If no admin user exists, force logout
-              session.user.id = null;
-              session.user.role = null;
-            }
-          } catch (error) {
-            console.error('Error handling legacy admin ID:', error);
+      // Ensure user object exists
+      if (!session.user) {
+        session.user = {};
+      }
+
+      // Always preserve email from token (should be there after JWT callback)
+      if (token.email) {
+        session.user.email = token.email;
+      }
+
+      // Always populate id and role from token
+      if (token.id === 'demo-admin') {
+        try {
+          await dbConnect();
+          const adminUser = await User.findOne({ email: 'admin@nitminer.com' });
+          if (adminUser) {
+            session.user.id = adminUser._id.toString();
+            session.user.role = adminUser.role;
+            session.user.isPremium = adminUser.isPremium;
+            session.user.trialCount = adminUser.trialCount;
+            session.user.email = adminUser.email; // Ensure email is set
+          } else {
+            // If no admin user exists, don't include them
             session.user.id = null;
             session.user.role = null;
+            session.user.isPremium = false;
+            session.user.trialCount = 0;
           }
-        } else {
-          session.user.id = token.id as string;
-          session.user.role = token.role as string;
+        } catch (error) {
+          console.error('Error handling legacy admin ID:', error);
+          session.user.id = token.id;
+          session.user.role = 'user';
+          session.user.isPremium = false;
+          session.user.trialCount = 0;
+        }
+      } else if (token.id) {
+        session.user.id = token.id as string;
+        session.user.role = (token.role as string) || 'user';
+        
+        // Fetch user data to get premium status and trial count
+        try {
+          await dbConnect();
+          const user = await User.findById(token.id);
+          if (user) {
+            session.user.isPremium = user.isPremium;
+            session.user.trialCount = user.trialCount;
+            // Also ensure email from database
+            if (!session.user.email) {
+              session.user.email = user.email;
+            }
+          } else {
+            session.user.isPremium = false;
+            session.user.trialCount = 0;
+          }
+        } catch (error) {
+          console.error('Error fetching user data in session callback:', error);
+          session.user.isPremium = false;
+          session.user.trialCount = 0;
         }
       }
+
+      console.log('Session callback result:', {
+        email: session.user?.email,
+        id: session.user?.id,
+        role: session.user?.role,
+        isPremium: session.user?.isPremium,
+        trialCount: session.user?.trialCount,
+      });
       return session;
     },
   },
@@ -220,6 +259,19 @@ export const authOptions: NextAuthOptions = {
   jwt: {
     secret: process.env.NEXTAUTH_SECRET,
     maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  cookies: {
+    sessionToken: {
+      name: 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production' && process.env.NEXTAUTH_COOKIE_SECURE === 'true',
+        sameSite: 'lax',
+        path: '/',
+        domain: process.env.NEXTAUTH_COOKIE_DOMAIN || undefined,
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+      },
+    },
   },
   debug: false,
 };

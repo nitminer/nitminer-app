@@ -24,7 +24,7 @@ export const metadata = {
   title: "NITMiner Technologies - Smart Contract Testing & Verification",
   description: "Advanced smart contract testing and verification solutions",
   icons: {
-    icon: "https://nitminer.com/logo_img/logo-rbg.png",
+    icon: "/images/Logo/logo.png",
   },
 };
 

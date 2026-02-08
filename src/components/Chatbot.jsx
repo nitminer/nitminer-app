@@ -3,11 +3,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { FiMessageSquare, FiX, FiSend, FiMinimize2 } from 'react-icons/fi';
 import ReactMarkdown from 'react-markdown';
+import { toolsData } from '../data/toolsData';
 
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: '**Hello!** I\'m your **TrustInn assistant**. I can help you with information about our security analysis platform, pricing, tools, and more.\n\n**How can I assist you today?**' }
+    { role: 'assistant', content: '**Hello!** I\'m your **TrustInn assistant**. I can help you with information about our TrustINN_Tools, pricing, tools, and more.\n\n**How can I assist you today?**' }
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -24,21 +25,21 @@ export default function Chatbot() {
   const trustInnContext = `# TrustInn - Security Analysis Platform
 
 ## What We Offer
-TrustInn provides 9 NASA-grade verification tools in one unified platform:
+TrustInn provides 10 Research Based tools which will help you to in one unified platform:
 
 **C/C++ Tools:**
-- CBMC (Condition Satisfiability Analysis)
-- KLEEMA (DSE-based Mutation Analyzer)
-- KLEE (Dynamic Symbolic Execution)
-- TX (Pruned Dynamic Symbolic Execution)
-- gMCov (Coverage Profiler)
-- gMutant (Mutation Testing Profiler)
+- Condition Satisfiability Analysis
+- DSE-based Mutation Analyzer
+- Dynamic Symbolic Execution
+- Pruned Dynamic Symbolic Execution
+- Coverage Profiler
+- Mutation Testing Profiler
 
 **Java Tools:**
-- JBMC (Java Bounded Model Checker)
+- Java Bounded Model Checker
 
 **Python Tools:**
-- Python Analyzer (Condition Coverage with Fuzzing)
+- Condition Coverage with Fuzzing
 
 **Blockchain Tools:**
 - VeriSol (Smart Contract Verifier)
@@ -139,6 +140,32 @@ TrustInn provides 9 NASA-grade verification tools in one unified platform:
 
 **Mission:** At NITMINER, we empower blockchain developers and enterprises by delivering cutting-edge automated testing solutions for smart contracts, enhancing reliability and performance through seamless, scalable, and highly secure testing processes.`;
 
+  const toolsSummary = toolsData.map(t => `- **${t.name}**: ${t.description}`).join('\n');
+
+  // Curated Q/A pairs for common visitor questions (fast, deterministic responses)
+  const curatedQA = [
+    {
+      patterns: ['hi', 'hy', 'hello', 'hey'],
+      response: "Hello, what can I help you with?"
+    },
+    {
+      patterns: ['pricing', 'price', 'plans', 'cost'],
+      response: `## TrustInn Pricing Plans\n\n### Free Trial Plan...`
+    },
+    {
+      patterns: ['pricing', 'price', 'plans', 'cost'],
+      response: `## TrustInn Pricing Plans\n\n### Free Trial Plan\n**Price:** Free  \n**Executions:** 5 executions  \n**Duration:** 7 days\n\n### Starter Plan\n**Price:** ₹499/month or ₹4,990/year  \n**Executions:** 50 monthly executions\n\n### Professional Plan\n**Price:** ₹2,499/month or ₹24,990/year  \n**Executions:** 500 monthly executions\n\n> **💡 Tip:** Contact sales@trustinn.com for enterprise pricing and discounts.`
+    },
+    {
+      patterns: ['how to run', 'run tool', 'execute', 'start a run'],
+      response: `## Running a Tool on TrustInn\n\n1. Login to your TrustInn dashboard.\n2. Upload your smart contract or source files.\n3. Choose the tool you want to run (e.g., CC-SolBMC, CC-SolCHC).\n4. Configure parameters and start execution.\n5. Download results as ZIP or view interactive visualizations.\n\nIf you want, tell me which tool and I can guide you step-by-step.`
+    },
+    {
+      patterns: ['contact', 'support', 'help'],
+      response: `## Need Help?\n\n- **Support Email:** support@trustinn.com\n- **Email:** sanghu@nitw.ac.in\n- **Phone:** +91-7013306805\n\n> **Tip:** For account or billing issues, include your account email when you contact support.`
+    }
+  ];
+
   const sendMessage = async () => {
     if (!inputMessage.trim()) return;
 
@@ -148,6 +175,33 @@ TrustInn provides 9 NASA-grade verification tools in one unified platform:
     setIsLoading(true);
 
     try {
+      // Local tool-specific fallback: if the user explicitly asks about a known tool,
+      // answer directly using our `toolsData` rather than calling the external API.
+      const lowerInput = inputMessage.toLowerCase();
+      const matchedTool = toolsData.find(t => (
+        lowerInput.includes(t.id.toLowerCase()) ||
+        lowerInput.includes(t.name.toLowerCase()) ||
+        lowerInput.includes((t.title || '').toLowerCase())
+      ));
+
+      if (matchedTool) {
+        const assistantContent = `## ${matchedTool.title}\n\n**Description:** ${matchedTool.detailedDescription || matchedTool.description}\n\n**Key Features:**\n${matchedTool.features.map(f => `- ${f}`).join('\n')}\n\n**Languages / Targets:** ${matchedTool.languages.join(', ')}\n\n**Use Cases:**\n${matchedTool.useCases.map(u => `- ${u}`).join('\n')}\n\n> **Interested in running this tool?** Visit the tools page or start a run from the dashboard.`;
+
+        const assistantMessage = { role: 'assistant', content: assistantContent };
+        setMessages(prev => [...prev, assistantMessage]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Check curated Q/A intents
+      const matchedQA = curatedQA.find(q => q.patterns.some(p => lowerInput.includes(p)));
+      if (matchedQA) {
+        const assistantMessage = { role: 'assistant', content: matchedQA.response };
+        setMessages(prev => [...prev, assistantMessage]);
+        setIsLoading(false);
+        return;
+      }
+
       const response = await fetch('https://api.perplexity.ai/chat/completions', {
         method: 'POST',
         headers: {
@@ -216,7 +270,10 @@ When asked about pricing, format like this:
 - Phone: **+91-7013306805**
 
 TrustInn Context:
-${trustInnContext}`
+${trustInnContext}
+
+Tools Overview:
+${toolsSummary}`
             },
             ...messages.slice(1),
             userMessage

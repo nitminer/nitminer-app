@@ -91,12 +91,22 @@ export default function OTPModal({ isOpen, email, onSuccess, onClose }) {
     setError('');
 
     try {
+      // Get signup data from sessionStorage if available
+      const signupDataString = sessionStorage.getItem('signupData');
+      const signupData = signupDataString ? JSON.parse(signupDataString) : {};
+
       const response = await fetch('/api/auth/send-otp', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({
+          email,
+          firstName: signupData.firstName || '',
+          lastName: signupData.lastName || '',
+          phone: signupData.phone || '',
+          password: signupData.password || '',
+        }),
       });
 
       if (!response.ok) {

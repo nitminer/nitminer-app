@@ -1,27 +1,63 @@
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import { User } from '@/models/User';
 import { Payment } from '@/models/Payment';
 import { NextRequest, NextResponse } from 'next/server';
 import { Types } from 'mongoose';
+import jwt from 'jsonwebtoken';
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    // Extract JWT token from cookies
+    const accessToken = req.cookies.get('accessToken')?.value;
 
-    if (!session?.user?.id) {
+    if (!accessToken) {
+      console.log('No access token found in cookies');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const secret = process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET;
+    if (!secret) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(accessToken, secret) as any;
+    } catch (error) {
+      console.log('Token verification failed:', error);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (decoded.type !== 'access') {
+      console.log('Invalid token type:', decoded.type);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userId = decoded.userId;
+    const userEmail = decoded.email;
+
+    console.log('GET /api/user/me - Session:', {
+      hasSession: true,
+      userId,
+      userEmail,
+    });
+
+    if (!userId) {
+      console.log('No userId found in token - returning 401');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await dbConnect();
 
     // Validate if the ID is a valid MongoDB ObjectId
-    if (!Types.ObjectId.isValid(session.user.id)) {
+    if (!Types.ObjectId.isValid(userId)) {
       return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 });
     }
 
-    const user = await User.findById(session.user.id).lean();
+    const user = await User.findById(userId).lean();
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -57,16 +93,52 @@ export async function GET(req: NextRequest) {
 }
 export async function PATCH(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    // Extract JWT token from cookies
+    const accessToken = req.cookies.get('accessToken')?.value;
 
-    if (!session?.user?.id) {
+    if (!accessToken) {
+      console.log('No access token found in cookies');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const secret = process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET;
+    if (!secret) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(accessToken, secret) as any;
+    } catch (error) {
+      console.log('Token verification failed:', error);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (decoded.type !== 'access') {
+      console.log('Invalid token type:', decoded.type);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userId = decoded.userId;
+    const userEmail = decoded.email;
+
+    console.log('PATCH /api/user/me - Session:', {
+      hasSession: true,
+      userId,
+      userEmail,
+    });
+
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await dbConnect();
 
     // Validate if the ID is a valid MongoDB ObjectId
-    if (!Types.ObjectId.isValid(session.user.id)) {
+    if (!Types.ObjectId.isValid(userId)) {
       return NextResponse.json({ error: 'Invalid user ID format' }, { status: 400 });
     }
 
@@ -84,7 +156,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const user = await User.findByIdAndUpdate(
-      session.user.id,
+      userId,
       updateData,
       { new: true }
     ).lean();

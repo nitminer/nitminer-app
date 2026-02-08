@@ -1,15 +1,35 @@
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import { Payment } from '@/models/Payment';
 import { NextRequest, NextResponse } from 'next/server';
+import jwt from 'jsonwebtoken';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const session = await getServerSession(authOptions);
 
-    if (!session?.user?.id) {
+    // Extract JWT token from cookies
+    const accessToken = req.cookies.get('accessToken')?.value;
+
+    if (!accessToken) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const secret = process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET;
+    if (!secret) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(accessToken, secret) as any;
+    } catch (error) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (decoded.type !== 'access' || !decoded.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -17,7 +37,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const payment = await Payment.findOne({
       _id: id,
-      userId: session.user.id,
+      userId: decoded.userId,
     }).lean();
 
     if (!payment) {

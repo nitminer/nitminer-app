@@ -50,6 +50,16 @@ export default function DynamicPricingPage() {
 
   useEffect(() => {
     const initializeData = async () => {
+      // Wait a bit for session to load if it's still loading
+      if (status === 'loading') {
+        // Wait up to 2 seconds for session to load
+        let attempts = 0;
+        while (status === 'loading' && attempts < 20) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+      }
+
       await Promise.all([
         checkAuthAndStatus(),
         fetchPricingPlans(),
@@ -57,14 +67,46 @@ export default function DynamicPricingPage() {
       ]);
     };
     initializeData();
-  }, [session]);
+  }, [session, status]);
 
   const checkAuthAndStatus = async () => {
     // Wait for session to load
     if (status === 'loading') return;
 
-    // Use NextAuth session instead of localStorage
-    if (session?.user?.email) {
+    console.log('PricingComponent - Session status:', status, 'Session:', session?.user?.email);
+
+    // Check for stored session data as fallback (similar to dashboard)
+    const checkStoredSession = () => {
+      try {
+        const storedSession = localStorage.getItem('nitminer_session') || sessionStorage.getItem('nitminer_session');
+        if (storedSession) {
+          const sessionData = JSON.parse(storedSession);
+          if (sessionData.user && sessionData.expires) {
+            const expiresAt = new Date(sessionData.expires);
+            if (expiresAt > new Date()) {
+              console.log('Using stored session for pricing page');
+              return sessionData.user;
+            } else {
+              // Clear expired session
+              localStorage.removeItem('nitminer_session');
+              sessionStorage.removeItem('nitminer_session');
+              localStorage.removeItem('user_email');
+              sessionStorage.removeItem('user_email');
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Error checking stored session:', error);
+      }
+      return null;
+    };
+
+    const storedUser = checkStoredSession();
+
+    // Use NextAuth session or stored session
+    const userEmail = session?.user?.email || storedUser?.email;
+
+    if (userEmail) {
       try {
         const response = await fetch('/api/auth/verify-status', {
           method: 'POST',
@@ -75,10 +117,15 @@ export default function DynamicPricingPage() {
         if (response.ok) {
           const data = await response.json();
           setUserStatus(data);
+          console.log('User status loaded:', data);
+        } else {
+          console.error('Failed to verify status:', response.status);
         }
       } catch (err) {
         console.error('Error checking status:', err);
       }
+    } else {
+      console.log('No session or stored session found');
     }
     // If not logged in, just continue showing pricing page
   };
@@ -119,11 +166,47 @@ export default function DynamicPricingPage() {
     const plan = pricingPlans.find(p => p._id === planId);
     if (!plan) return;
 
-    if (!session?.user?.email) {
-      setError('Email not found. Please log in again.');
+    // Check if session is still loading
+    if (status === 'loading') {
+      setError('Please wait while we verify your session...');
       return;
     }
 
+    // Check for stored session as fallback
+    const checkStoredSession = () => {
+      try {
+        const storedSession = localStorage.getItem('nitminer_session') || sessionStorage.getItem('nitminer_session');
+        if (storedSession) {
+          const sessionData = JSON.parse(storedSession);
+          if (sessionData.user && sessionData.expires) {
+            const expiresAt = new Date(sessionData.expires);
+            if (expiresAt > new Date()) {
+              return sessionData.user;
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Error checking stored session:', error);
+      }
+      return null;
+    };
+
+    const storedUser = checkStoredSession();
+
+    // Check if user is authenticated (NextAuth session or stored session)
+    if (!session && !storedUser) {
+      setError('Please log in to upgrade your plan.');
+      router.push('/login');
+      return;
+    }
+
+    const userEmail = session?.user?.email || storedUser?.email;
+    if (!userEmail) {
+      setError('Session expired. Please log in again.');
+      router.push('/login');
+      return;
+    }
+ 
     setIsProcessing(true);
     setProcessingMessage('');
     setError('');
@@ -149,17 +232,21 @@ export default function DynamicPricingPage() {
         })
       });
 
+      console.log('Payment initiate response status:', orderResponse.status);
+
       if (!orderResponse.ok) {
         const errorData = await orderResponse.json();
-        setError(errorData.message || 'Failed to initiate payment');
+        console.error('Payment initiate error:', errorData);
+        setError(errorData.error || 'Failed to initiate payment');
         setIsProcessing(false);
         return;
       }
 
       const orderData = await orderResponse.json();
+      console.log('Payment order created:', orderData);
 
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        key: orderData.key || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: orderData.amount,
         currency: 'INR',
         name: 'TrustInn Platform',
@@ -191,10 +278,40 @@ export default function DynamicPricingPage() {
 
             setProcessingMessage('✅ Payment Verified! Activating your plan...');
 
-            setTimeout(() => {
-              setIsProcessing(false);
-              alert('✅ Payment successful! Your premium plan is now active.');
-              router.push('/trustinn');
+            setTimeout(async () => {
+              try {
+                // Generate JWT token for TrustInn access
+                const tokenResponse = await fetch('/api/auth/generate-token', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  credentials: 'include'
+                });
+
+                if (!tokenResponse.ok) {
+                  throw new Error('Failed to generate access token');
+                }
+
+                const tokenData = await tokenResponse.json();
+                const jwtToken = tokenData.token;
+
+                // Build TrustInn URL with JWT token
+                const trustInnUrl = new URL('https://trustinn.nitminer.com/tools');
+                trustInnUrl.searchParams.append('token', jwtToken);
+
+                setIsProcessing(false);
+                alert('✅ Payment successful! Your premium plan is now active.');
+                
+                // Redirect to TrustInn with JWT token
+                window.location.href = trustInnUrl.toString();
+              } catch (error) {
+                console.error('Error generating token for TrustInn:', error);
+                setIsProcessing(false);
+                alert('✅ Payment successful! Your premium plan is now active.');
+                // Fallback redirect without token
+                router.push('/dashboard');
+              }
             }, 2000);
           } catch (err) {
             console.error('Verification error:', err);
@@ -255,24 +372,24 @@ export default function DynamicPricingPage() {
             ? 'border-slate-700/50 bg-slate-900/50' 
             : 'border-gray-200/50 bg-white/50'
         }`}>
-          <div className="max-w-7xl mx-auto px-6 py-20 text-center">
-            <div className={`inline-block mb-4 px-4 py-2 rounded-full ${
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 text-center">
+            <div className={`inline-block mb-4 px-3 sm:px-4 py-2 rounded-full ${
               isDark 
                 ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/50' 
                 : 'bg-gradient-to-r from-blue-100/80 to-purple-100/80 border border-blue-200/50'
             }`}>
-              <span className={`text-sm font-semibold ${
+              <span className={`text-xs sm:text-sm font-semibold ${
                 isDark ? 'text-blue-300' : 'text-blue-700'
               }`}>💎 FLEXIBLE PRICING</span>
             </div>
-            <h1 className={`text-5xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent ${
+            <h1 className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 bg-clip-text text-transparent ${
               isDark 
                 ? 'bg-gradient-to-r from-blue-400 to-purple-400' 
                 : 'bg-gradient-to-r from-blue-600 to-purple-600'
             }`}>
               Choose Your Perfect Plan
             </h1>
-            <p className={`text-lg md:text-xl max-w-2xl mx-auto mb-4 ${
+            <p className={`text-base sm:text-lg md:text-xl max-w-2xl mx-auto mb-4 px-2 ${
               isDark ? 'text-slate-300' : 'text-gray-600'
             }`}>
               Powerful tools for code analysis, testing, and verification at any scale
@@ -280,34 +397,34 @@ export default function DynamicPricingPage() {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-6 py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
         {/* Status Alerts */}
         {userStatus?.hasPremium && (
-          <div className={`mb-12 p-6 rounded-lg ${
+          <div className={`mb-8 sm:mb-12 p-4 sm:p-6 rounded-lg ${
             isDark 
               ? 'bg-green-900 border border-green-700' 
               : 'bg-green-50 border border-green-200'
           }`}>
-            <p className={`font-semibold ${
+            <p className={`font-semibold text-sm sm:text-base ${
               isDark ? 'text-green-300' : 'text-green-800'
             }`}>✓ You already have {userStatus.currentPlan} active!</p>
           </div>
         )}
 
         {userStatus?.trialExceeded && !userStatus?.hasPremium && (
-          <div className={`mb-12 p-6 rounded-lg ${
+          <div className={`mb-8 sm:mb-12 p-4 sm:p-6 rounded-lg ${
             isDark 
               ? 'bg-red-900 border border-red-700' 
               : 'bg-red-50 border border-red-200'
           }`}>
-            <p className={`font-semibold ${
+            <p className={`font-semibold text-sm sm:text-base ${
               isDark ? 'text-red-300' : 'text-red-800'
             }`}>⏰ Your trial period has ended. Upgrade to continue!</p>
           </div>
         )}
 
         {error && (
-          <div className={`mb-8 p-4 rounded-lg ${
+          <div className={`mb-6 sm:mb-8 p-3 sm:p-4 rounded-lg text-sm sm:text-base ${
             isDark 
               ? 'bg-red-900 border border-red-700 text-red-300' 
               : 'bg-red-50 border border-red-200 text-red-800'
@@ -317,15 +434,15 @@ export default function DynamicPricingPage() {
         )}
 
         {/* Billing Period Selector */}
-        <div className="flex justify-center mb-12">
-          <div className={`backdrop-blur-sm rounded-lg p-1 ${
+        <div className="flex justify-center mb-8 sm:mb-12 overflow-x-auto px-2">
+          <div className={`backdrop-blur-sm rounded-lg p-1 flex flex-nowrap gap-1 ${
             isDark 
               ? 'bg-slate-800/50 border border-slate-700' 
               : 'bg-white/50 border border-gray-200'
           }`}>
             <button
               onClick={() => setBillingPeriod('monthly')}
-              className={`px-6 py-2 rounded-md text-sm font-medium transition ${
+              className={`px-3 sm:px-6 py-2 rounded-md text-xs sm:text-sm font-medium transition whitespace-nowrap ${
                 billingPeriod === 'monthly'
                   ? 'bg-blue-600 text-white shadow-lg'
                   : isDark 
@@ -337,7 +454,7 @@ export default function DynamicPricingPage() {
             </button>
             <button
               onClick={() => setBillingPeriod('sixMonth')}
-              className={`px-6 py-2 rounded-md text-sm font-medium transition ${
+              className={`px-3 sm:px-6 py-2 rounded-md text-xs sm:text-sm font-medium transition whitespace-nowrap ${
                 billingPeriod === 'sixMonth'
                   ? 'bg-blue-600 text-white shadow-lg'
                   : isDark 
@@ -346,15 +463,15 @@ export default function DynamicPricingPage() {
               }`}
             >
               6 Months
-              <span className={`ml-1 text-xs px-1 py-0.5 rounded ${
+              <span className={`ml-1 text-xs px-1 py-0.5 rounded inline-block ${
                 isDark 
                   ? 'bg-green-600/20 text-green-300' 
                   : 'bg-green-100/80 text-green-700'
-              }`}>Save 17%</span>
+              }`}>17%</span>
             </button>
             <button
               onClick={() => setBillingPeriod('yearly')}
-              className={`px-6 py-2 rounded-md text-sm font-medium transition ${
+              className={`px-3 sm:px-6 py-2 rounded-md text-xs sm:text-sm font-medium transition whitespace-nowrap ${
                 billingPeriod === 'yearly'
                   ? 'bg-blue-600 text-white shadow-lg'
                   : isDark 
@@ -363,17 +480,17 @@ export default function DynamicPricingPage() {
               }`}
             >
               12 Months
-              <span className={`ml-1 text-xs px-1 py-0.5 rounded ${
+              <span className={`ml-1 text-xs px-1 py-0.5 rounded inline-block ${
                 isDark 
                   ? 'bg-green-600/20 text-green-300' 
                   : 'bg-green-100/80 text-green-700'
-              }`}>Save 17%</span>
+              }`}>17%</span>
             </button>
           </div>
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-12 sm:mb-16">
           {pricingPlans.map((plan, idx) => {
             const isPopular = plan.badge === 'Most Popular';
             const price = billingPeriod === 'monthly' ? plan.monthlyPrice : billingPeriod === 'sixMonth' ? plan.sixMonthPrice : plan.yearlyPrice;
@@ -397,8 +514,8 @@ export default function DynamicPricingPage() {
                 key={plan._id}
                 className={`relative rounded-2xl border backdrop-blur transition transform hover:shadow-2xl hover:scale-105 group
                   ${colors.border} ${colors.bg}
-                  ${isPopular ? 'md:scale-105 shadow-2xl shadow-blue-500/20' : 'hover:shadow-lg'} 
-                  p-8 overflow-hidden`}
+                  ${isPopular ? 'sm:scale-105 shadow-2xl shadow-blue-500/20' : 'hover:shadow-lg'} 
+                  p-6 sm:p-8 overflow-hidden flex flex-col h-full`}
               >
                 {/* Glow Effect */}
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500">
@@ -406,31 +523,31 @@ export default function DynamicPricingPage() {
                 </div>
 
                 {/* Content */}
-                <div className="relative z-10">
+                <div className="relative z-10 flex flex-col h-full">
                   {/* Badge */}
                   {plan.badge && (
-                    <div className={`inline-block mb-4 px-3 py-1 ${colors.badge} text-xs font-bold rounded-full`}>
+                    <div className={`inline-block mb-4 px-3 py-1 self-start ${colors.badge} text-xs font-bold rounded-full`}>
                       {plan.badge}
                     </div>
                   )}
 
                   {/* Header */}
                   <div className="mb-6">
-                    <h3 className={`text-2xl font-bold mb-2 ${
+                    <h3 className={`text-xl sm:text-2xl font-bold mb-2 ${
                       isDark ? 'text-white' : 'text-gray-900'
                     }`}>{plan.displayName}</h3>
-                    <p className={`text-sm ${
+                    <p className={`text-xs sm:text-sm ${
                       isDark ? 'text-slate-400' : 'text-gray-600'
                     }`}>{plan.description}</p>
                   </div>
 
                   {/* Price */}
-                  <div className="mb-8">
-                    <div className="flex items-baseline gap-2 mb-2">
-                      <span className={`text-4xl font-bold ${
+                  <div className="mb-6 sm:mb-8">
+                    <div className="flex items-baseline gap-2 mb-2 flex-wrap">
+                      <span className={`text-3xl sm:text-4xl font-bold ${
                         isDark ? 'text-white' : 'text-gray-900'
                       }`}>₹{price.toLocaleString('en-IN')}</span>
-                      <span className={`${
+                      <span className={`text-xs sm:text-base ${
                         isDark ? 'text-slate-400' : 'text-gray-500'
                       }`}>/{periodLabel}</span>
                     </div>
@@ -447,7 +564,7 @@ export default function DynamicPricingPage() {
                   <button
                     onClick={() => handleUpgrade(plan._id)}
                     disabled={isCurrentPlan || userStatus?.hasPremium}
-                    className={`w-full py-3 rounded-lg font-semibold mb-8 transition ${
+                    className={`w-full py-3 rounded-lg font-semibold mb-6 sm:mb-8 transition text-sm sm:text-base ${
                       isCurrentPlan
                         ? 'bg-slate-600/50 text-slate-300 cursor-not-allowed'
                         : `${colors.button} text-white`
@@ -457,7 +574,7 @@ export default function DynamicPricingPage() {
                   </button>
 
                   {/* Key Metrics */}
-                  <div className={`space-y-3 mb-8 pb-8 border-b ${
+                  <div className={`space-y-3 mb-6 sm:mb-8 pb-6 sm:pb-8 border-b ${
                     isDark ? 'border-slate-700/50' : 'border-gray-200/50'
                   }`}>
                     <div className="text-sm">
@@ -472,20 +589,20 @@ export default function DynamicPricingPage() {
                       <p className={`text-xs uppercase tracking-wide ${
                         isDark ? 'text-slate-400' : 'text-gray-500'
                       }`}>Support</p>
-                      <p className={`font-semibold capitalize ${
+                      <p className={`font-semibold capitalize text-sm ${
                         isDark ? 'text-white' : 'text-gray-900'
                       }`}>{plan.supportLevel}</p>
                     </div>
                   </div>
 
                   {/* Features */}
-                  <div className="space-y-3 mb-6">
+                  <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6 flex-grow">
                     {plan.features.slice(0, 4).map((feature, idx) => (
-                      <div key={idx} className="flex items-center gap-2 text-sm">
+                      <div key={idx} className="flex items-start gap-2 text-xs sm:text-sm">
                         {feature.included ? (
-                          <Check size={16} className="text-green-400 flex-shrink-0" />
+                          <Check size={16} className="text-green-400 flex-shrink-0 mt-0.5" />
                         ) : (
-                          <X size={16} className={`flex-shrink-0 ${
+                          <X size={16} className={`flex-shrink-0 mt-0.5 ${
                             isDark ? 'text-slate-500' : 'text-gray-400'
                           }`} />
                         )}
@@ -527,10 +644,10 @@ export default function DynamicPricingPage() {
 
       {/* Processing Modal */}
       {isProcessing && (
-        <div className={`fixed inset-0 flex items-center justify-center z-50 ${
+        <div className={`fixed inset-0 flex items-center justify-center z-50 p-4 ${
           isDark ? 'bg-black bg-opacity-75' : 'bg-gray-900 bg-opacity-50'
         }`}>
-          <div className={`rounded-lg shadow-2xl p-8 max-w-md w-full mx-4 border ${
+          <div className={`rounded-lg shadow-2xl p-6 sm:p-8 max-w-md w-full border ${
             isDark 
               ? 'bg-slate-800 border-slate-700' 
               : 'bg-white border-gray-200'
@@ -544,21 +661,21 @@ export default function DynamicPricingPage() {
               </div>
             </div>
 
-            <h3 className={`text-xl font-bold text-center mb-3 ${
+            <h3 className={`text-lg sm:text-xl font-bold text-center mb-3 ${
               isDark ? 'text-white' : 'text-gray-900'
             }`}>Payment Processing</h3>
-            <p className={`text-center mb-6 ${
+            <p className={`text-center mb-6 text-sm sm:text-base ${
               isDark ? 'text-slate-300' : 'text-gray-600'
             }`}>
               {processingMessage || 'Payment is being processed...'}
             </p>
             
-            <div className={`rounded p-4 mb-6 ${
+            <div className={`rounded p-3 sm:p-4 mb-6 ${
               isDark 
                 ? 'bg-yellow-900 border border-yellow-700' 
                 : 'bg-yellow-50 border border-yellow-200'
             }`}>
-              <p className={`text-sm font-semibold text-center ${
+              <p className={`text-xs sm:text-sm font-semibold text-center ${
                 isDark ? 'text-yellow-300' : 'text-yellow-800'
               }`}>
                 ⚠️ Please don't refresh or close this page until the transaction completes
@@ -566,16 +683,16 @@ export default function DynamicPricingPage() {
             </div>
 
             <div className="space-y-3 mb-6">
-              <div className="flex items-center text-sm">
-                <div className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center mr-3 animate-pulse">
+              <div className="flex items-center text-xs sm:text-sm">
+                <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center mr-3 animate-pulse">
                   ⋯
                 </div>
                 <span className={`${
                   isDark ? 'text-slate-300' : 'text-gray-700'
                 }`}>Processing your payment...</span>
               </div>
-              <div className="flex items-center text-sm">
-                <div className="w-6 h-6 rounded-full bg-slate-600 text-white flex items-center justify-center mr-3">
+              <div className="flex items-center text-xs sm:text-sm">
+                <div className="w-6 h-6 rounded-full bg-slate-600 text-white text-xs flex items-center justify-center mr-3">
                   ◯
                 </div>
                 <span className={`${

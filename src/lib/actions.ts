@@ -1,10 +1,44 @@
 'use server';
 
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { cookies } from 'next/headers';
+import jwt from 'jsonwebtoken';
 import dbConnect from '@/lib/dbConnect';
 import { User } from '@/models/User';
 import { Payment } from '@/models/Payment';
+
+/**
+ * Helper function to get user ID from JWT token in cookies
+ */
+async function getUserIdFromCookies(): Promise<string | null> {
+  try {
+    const cookieStore = await cookies();
+    const accessToken = cookieStore.get('accessToken')?.value;
+
+    if (!accessToken) {
+      return null;
+    }
+
+    const secret = process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET;
+    if (!secret) {
+      return null;
+    }
+
+    try {
+      const decoded = jwt.verify(accessToken, secret) as any;
+      if (decoded.type === 'access' && decoded.userId) {
+        return decoded.userId;
+      }
+    } catch (error) {
+      console.warn('Token verification failed:', error);
+      return null;
+    }
+  } catch (error) {
+    console.warn('Error reading cookies:', error);
+    return null;
+  }
+
+  return null;
+}
 
 /**
  * Server action to check if user can access tool
@@ -12,9 +46,9 @@ import { Payment } from '@/models/Payment';
  */
 export async function checkToolAccess() {
   try {
-    const session = await getServerSession(authOptions);
+    const userId = await getUserIdFromCookies();
 
-    if (!session?.user?.id) {
+    if (!userId) {
       return {
         allowed: false,
         reason: 'not_authenticated',
@@ -24,7 +58,7 @@ export async function checkToolAccess() {
 
     await dbConnect();
 
-    const user = await User.findById(session.user.id);
+    const user = await User.findById(userId);
 
     if (!user) {
       return {
@@ -83,15 +117,15 @@ export async function checkToolAccess() {
  */
 export async function getSubscriptionStatus() {
   try {
-    const session = await getServerSession(authOptions);
+    const userId = await getUserIdFromCookies();
 
-    if (!session?.user?.id) {
+    if (!userId) {
       return null;
     }
 
     await dbConnect();
 
-    const user = await User.findById(session.user.id).select(
+    const user = await User.findById(userId).select(
       'isPremium subscriptionExpiry trialCount'
     );
 
@@ -125,16 +159,16 @@ export async function getSubscriptionStatus() {
  */
 export async function getLatestPayment() {
   try {
-    const session = await getServerSession(authOptions);
+    const userId = await getUserIdFromCookies();
 
-    if (!session?.user?.id) {
+    if (!userId) {
       return null;
     }
 
     await dbConnect();
 
     const payment = await Payment.findOne({
-      userId: session.user.id,
+      userId: userId,
       status: 'success',
     })
       .sort({ createdAt: -1 })
@@ -152,15 +186,15 @@ export async function getLatestPayment() {
  */
 export async function isAdmin() {
   try {
-    const session = await getServerSession(authOptions);
+    const userId = await getUserIdFromCookies();
 
-    if (!session?.user?.id) {
+    if (!userId) {
       return false;
     }
 
     await dbConnect();
 
-    const user = await User.findById(session.user.id).select('role');
+    const user = await User.findById(userId).select('role');
 
     return user?.role === 'admin';
   } catch (error) {

@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import { SessionManagement } from '@/models/SessionManagement';
+import { User } from '@/models/User';
+import crypto from 'crypto';
 
 /**
  * POST /api/auth/session/check-duplicate
  * Check if another device/browser is already logged in with this email
- * Strictly prevents multi-browser and multi-device login
+ * Creates/updates current session and flags other sessions as duplicates
  */
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
 
     const body = await request.json();
-    const { email, deviceId, deviceFingerprint, browser } = body;
+    const { email, deviceId, deviceFingerprint, browser, os, deviceName } = body;
 
     if (!email || !deviceId || !deviceFingerprint) {
       console.warn('check-duplicate: Missing required fields', { email, deviceId, browser });
@@ -23,41 +25,75 @@ export async function POST(request: NextRequest) {
     }
 
     const normalizedEmail = email.toLowerCase();
-    console.log(`Checking duplicate sessions for ${normalizedEmail}, browser: ${browser}`);
+    console.log(`[DUPLICATE CHECK] Checking for ${normalizedEmail}, device: ${deviceId}, browser: ${browser}`);
 
-    // Find ALL active sessions for this email (strict check)
-    const activeSessions = await SessionManagement.find({
+    // Get or create user
+    let user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      console.log(`[DUPLICATE CHECK] User not found, creating...`);
+      user = await User.create({
+        name: normalizedEmail.split('@')[0],
+        email: normalizedEmail,
+        role: 'user',
+        trialCount: 5,
+        isPremium: false,
+      });
+    }
+
+    // Get client IP
+    const ipAddress =
+      request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
+      request.headers.get('x-real-ip') ||
+      'unknown';
+
+    // Check if a session already exists for this SAME device
+    const existingDeviceSession = await SessionManagement.findOne({
       email: normalizedEmail,
+      deviceId: deviceId,
       isActive: true,
     });
 
-    console.log(`Found ${activeSessions.length} active sessions for ${normalizedEmail}`);
+    if (existingDeviceSession) {
+      // Update last activity on existing session
+      existingDeviceSession.lastActivity = new Date();
+      await existingDeviceSession.save();
+      console.log(`[DUPLICATE CHECK] ✅ Updated existing session for same device`);
+    } else {
+      // Create new session for current device
+      const sessionToken = crypto.randomBytes(32).toString('hex');
+      const newSession = new SessionManagement({
+        userId: user._id,
+        email: normalizedEmail,
+        deviceId,
+        deviceFingerprint,
+        deviceName: deviceName || 'Unknown Device',
+        browser: browser || 'Unknown',
+        os: os || 'Unknown',
+        ipAddress,
+        sessionToken,
+        isActive: true,
+        loginTime: new Date(),
+        lastActivity: new Date(),
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      });
+      await newSession.save();
+      console.log(`[DUPLICATE CHECK] ✅ Created new session for device: ${deviceId}`);
+    }
 
-    // Check for ANY other session (different device or different browser)
-    const otherSessions = activeSessions.filter((session) => {
-      const isDifferentDevice = session.deviceId !== deviceId;
-      const isDifferentBrowser = session.browser !== browser;
-      
-      console.log(`Session check - Device: ${session.deviceId} vs ${deviceId} (different: ${isDifferentDevice}), Browser: ${session.browser} vs ${browser} (different: ${isDifferentBrowser})`);
-      
-      // Prevent login if different device
-      if (isDifferentDevice) {
-        return true;
-      }
-      // Prevent login if same device but different browser
-      if (isDifferentBrowser) {
-        return true;
-      }
-      return false;
+    // Now find other ACTIVE sessions from DIFFERENT devices
+    const otherActiveSessions = await SessionManagement.find({
+      email: normalizedEmail,
+      deviceId: { $ne: deviceId }, // Different device
+      isActive: true,
     });
 
-    console.log(`Found ${otherSessions.length} conflicting sessions`);
+    console.log(`[DUPLICATE CHECK] Found ${otherActiveSessions.length} other active sessions`);
 
-    if (otherSessions.length > 0) {
+    if (otherActiveSessions.length > 0) {
       return NextResponse.json(
         {
           isDuplicate: true,
-          existingSessions: otherSessions.map((session) => ({
+          existingSessions: otherActiveSessions.map((session) => ({
             id: session._id,
             deviceName: session.deviceName,
             browser: session.browser,
@@ -71,12 +107,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // No other active sessions found
     return NextResponse.json(
       { isDuplicate: false, existingSessions: [] },
       { status: 200 }
     );
   } catch (error) {
-    console.error('Duplicate session check error:', error);
+    console.error('[DUPLICATE CHECK] Error:', error);
     return NextResponse.json(
       { error: 'Failed to check duplicate sessions' },
       { status: 500 }

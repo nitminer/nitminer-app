@@ -1,0 +1,44 @@
+{
+  "appId": "com.nitminer.desktop",
+  "productName": "NitMiner",
+  "directories": {
+    "buildResources": "public"
+  },
+  "files": [
+    "build/**/*",
+    "electron/main.js",
+    "electron/preload.js",
+    "node_modules/**/*"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "signAndEditExecutable": false
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "NitMiner"
+  },
+  "mac": {
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["arm64", "x64"]
+      }
+    ],
+    "category": "public.app-category.utilities"
+  },
+  "dmg": {
+    "sign": false
+  }
+}
+
+
+

@@ -11,7 +11,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'nitminer.com',
+        hostname: 'www.nitminer.com',
       },
       {
         protocol: 'https',

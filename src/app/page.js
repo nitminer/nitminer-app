@@ -16,12 +16,11 @@ export default function Home() {
         </section> */}
         {/* Hero Section */}
         <section className="w-full">
-          {/* <HeroComponent /> */}
+          <HeroComponent />
         </section>
 
         {/* Carousel Section - Commented Out */}
-        
-
+        <h1>updating now at morning am</h1>
         {/* About Us Section */}
         <section className="w-full">
           <AboutUs />

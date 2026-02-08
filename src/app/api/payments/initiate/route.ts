@@ -15,17 +15,30 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
 
+    console.log('Payment initiate - Session:', session?.user?.email, 'ID:', session?.user?.id);
+
     if (!session?.user?.email) {
+      console.log('Payment initiate - No session found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { email, plan, amount, duration, durationUnit, planDisplayName } = await req.json();
 
+    console.log('Payment initiate - Request data:', { email, plan, amount, duration, durationUnit, planDisplayName });
+
     if (!email || !plan || !amount || !duration || !durationUnit) {
+      console.log('Payment initiate - Missing required fields');
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     await dbConnect();
+
+    // Find user by email to get user ID
+    const user = await User.findOne({ email: session.user.email });
+    if (!user) {
+      console.log('Payment initiate - User not found:', session.user.email);
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
 
     // Create Razorpay order
     const options = {
@@ -45,7 +58,7 @@ export async function POST(req: NextRequest) {
     // Store initial payment record
     const paymentPlan = duration === 1 ? '1_month' : duration === 6 ? '6_months' : '12_months';
     const payment = await Payment.create({
-      userId: session.user.id,
+      userId: user._id.toString(),
       plan: paymentPlan,
       amount: amount / 100, // Convert from paise to rupees
       paymentMethod: 'razorpay',

@@ -15,7 +15,7 @@ export default function LoginTypeSelector() {
         {/* Toggle Button */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-zinc-800 rounded-xl text-gray-900 dark:text-white font-bold hover:shadow-lg transition-all"
+          className="inline-flex items-center gap-2 px-5 py-2.5 border border-green-500  bg-white dark:bg-zinc-800 rounded-xl text-gray-900 dark:text-white font-bold hover:shadow-lg transition-all"
           style={{ fontFamily: 'Space Grotesk, sans-serif' }}
         >
           <span className="text-sm">Login As</span>

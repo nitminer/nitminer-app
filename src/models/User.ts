@@ -1,14 +1,20 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import bcrypt from 'bcryptjs';
 
 export interface IUser extends Document {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
+  phone: string;
   password?: string;
+  clerkUserId?: string;
   googleId?: string;
   role: 'user' | 'admin';
   trialCount: number;
   isPremium: boolean;
+  isActive: boolean;
   subscriptionExpiry: Date | null;
+  tokenVersion: number;
   subscription?: {
     plan: '1_month' | '6_months' | '12_months';
     status: 'active' | 'expired' | 'cancelled';
@@ -27,11 +33,17 @@ export interface IUser extends Document {
   };
   createdAt: Date;
   updatedAt: Date;
+  comparePassword(password: string): Promise<boolean>;
 }
 
 const userSchema = new Schema<IUser>(
   {
-    name: {
+    firstName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    lastName: {
       type: String,
       required: true,
       trim: true,
@@ -43,14 +55,24 @@ const userSchema = new Schema<IUser>(
       lowercase: true,
       trim: true,
     },
+    phone: {
+      type: String,
+      required: true,
+      trim: true,
+    },
     password: {
       type: String,
-      select: false, // Don't return password by default
+      select: false,
+    },
+    clerkUserId: {
+      type: String,
+      unique: true,
+      sparse: true,
     },
     googleId: {
       type: String,
       unique: true,
-      sparse: true, // Allow null values for non-Google users
+      sparse: true,
     },
     role: {
       type: String,
@@ -66,9 +88,17 @@ const userSchema = new Schema<IUser>(
       type: Boolean,
       default: false,
     },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
     subscriptionExpiry: {
       type: Date,
       default: null,
+    },
+    tokenVersion: {
+      type: Number,
+      default: 0,
     },
     subscription: {
       plan: {
@@ -130,5 +160,37 @@ const userSchema = new Schema<IUser>(
 
 // Index for faster queries
 userSchema.index({ isPremium: 1 });
+
+// Hash password before saving
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) {
+    return;
+  }
+
+  try {
+    if (this.password) {
+      const salt = await bcrypt.genSalt(10);
+      this.password = await bcrypt.hash(this.password, salt);
+    }
+  } catch (error) {
+    throw error;
+  }
+});
+
+// Method to compare password during login
+userSchema.methods.comparePassword = async function (
+  candidatePassword: string
+): Promise<boolean> {
+  if (!this.password) {
+    return false;
+  }
+
+  try {
+    return await bcrypt.compare(candidatePassword, this.password);
+  } catch (error) {
+    console.error('Password comparison error:', error);
+    return false;
+  }
+};
 
 export const User = mongoose.models.User || mongoose.model<IUser>('User', userSchema);

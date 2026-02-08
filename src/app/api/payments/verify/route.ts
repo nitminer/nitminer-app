@@ -1,11 +1,10 @@
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import { User } from '@/models/User';
 import { Payment } from '@/models/Payment';
 import Razorpay from 'razorpay';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import { generateHTMLPDFReceiptBuffer } from '@/lib/receiptGenerator';
 import { uploadReceiptToCloudinary } from '@/lib/cloudinary';
 import { sendPaymentSuccessEmail } from '@/lib/email';
@@ -17,13 +16,42 @@ const razorpay = new Razorpay({
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    // Extract JWT token from cookies
+    const accessToken = req.cookies.get('accessToken')?.value;
 
-    if (!session?.user?.email) {
+    if (!accessToken) {
+      console.log('Payment verify - No access token found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const secret = process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET;
+    if (!secret) {
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(accessToken, secret) as any;
+    } catch (error) {
+      console.log('Payment verify - Token verification failed');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (decoded.type !== 'access' || !decoded.email) {
+      console.log('Payment verify - Invalid token');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userEmail = decoded.email;
+
+    console.log('Payment verify - Session:', userEmail, 'ID:', decoded.userId);
+
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = await req.json();
+
+    console.log('Payment verify - Request data:', { razorpay_order_id, razorpay_payment_id, razorpay_signature });
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return NextResponse.json({ error: 'Missing payment verification data' }, { status: 400 });
@@ -92,7 +120,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Update user subscription
-    const user = await User.findById(session.user.id);
+    const user = await User.findById(decoded.userId);
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
