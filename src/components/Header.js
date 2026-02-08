@@ -7,7 +7,7 @@ import { ThemeToggle } from "./theme-toggle";
 import { AboutUsDropdown } from "./AboutUsDropdown";
 import { ProductsDropdown } from "./ProductsDropdown";
 import { useState, useEffect, useRef } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import TrustInnAccessModal from "./TrustInnAccessModal";
 import DuplicateSessionModal from "./DuplicateSessionModal";
@@ -25,46 +25,31 @@ export default function Header() {
   const [existingSessions, setExistingSessions] = useState([]);
   const [pendingTrustInnRedirect, setPendingTrustInnRedirect] = useState(null);
   const [loadingDuplicateCheck, setLoadingDuplicateCheck] = useState(false);
-  const { data: session, status } = useSession();
+  const { data: session, status, update: updateSession } = useSession();
   const router = useRouter();
   const profileMenuRef = useRef(null);
   
-  // JWT-based session state
-  const [jwtSessionData, setJwtSessionData] = useState(null);
-  const [isLoadingSession, setIsLoadingSession] = useState(true);
-  
-  // Check JWT session on mount and when component updates
+  // Use NextAuth session for authentication status
+  const isLoggedIn = status === 'authenticated' && !!session?.user;
+  const userEmail = session?.user?.email || '';
+  const userName = session?.user?.name || userEmail?.split('@')[0] || 'User';
+  const userRole = session?.user?.role || 'user';
+
+  // Debug logging
   useEffect(() => {
-    const checkJWTSession = async () => {
-      try {
-        const response = await fetch('/api/auth/session', {
-          method: 'GET',
-          credentials: 'include',
-        });
+    console.log('[Header] Session status:', { status, isLoggedIn, hasUser: !!session?.user, user: session?.user });
+  }, [session, status, isLoggedIn]);
 
-        const data = await response.json();
-
-        if (data.authenticated && data.user) {
-          setJwtSessionData(data.user);
-        } else {
-          setJwtSessionData(null);
-        }
-      } catch (error) {
-        console.warn('Error checking JWT session in header:', error);
-        setJwtSessionData(null);
-      } finally {
-        setIsLoadingSession(false);
-      }
-    };
-
-    checkJWTSession();
-  }, []);
-  
-  // Use JWT session data for authentication status
-  const isLoggedIn = !!jwtSessionData;
-  const userEmail = jwtSessionData?.email || '';
-  const userName = jwtSessionData?.firstName ? `${jwtSessionData.firstName} ${jwtSessionData.lastName || ''}`.trim() : userEmail?.split('@')[0] || 'User';
-  const userRole = jwtSessionData?.role || 'user';
+  // Force session refresh if we just logged in
+  useEffect(() => {
+    const loginSuccess = localStorage.getItem('login_success');
+    if (loginSuccess === 'true') {
+      console.log('[Header] Login detected, refreshing session...');
+      // Manually trigger session update
+      updateSession();
+      localStorage.removeItem('login_success');
+    }
+  }, [updateSession]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -113,6 +98,8 @@ export default function Header() {
       sessionStorage.removeItem('nitminer_session');
       sessionStorage.removeItem('tempUser');
       sessionStorage.removeItem('deviceInfo');
+      localStorage.removeItem('login_success');
+      localStorage.removeItem('login_time');
     } catch (error) {
       console.warn('Error clearing stored session:', error);
     }
@@ -126,32 +113,8 @@ export default function Header() {
       }
     }
     
-    // Call logout endpoint to clear cookies and invalidate JWT tokens
-    try {
-      const logoutResponse = await fetch('/api/auth/session/logout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({}),
-      });
-
-      if (logoutResponse.ok) {
-        console.log('Successfully logged out from server');
-      } else {
-        console.warn('Logout endpoint returned non-OK status:', logoutResponse.status);
-      }
-    } catch (error) {
-      console.warn('Error calling logout endpoint:', error);
-    }
-    
-    // Clear JWT session data from state
-    setJwtSessionData(null);
-    
-    // Small delay to ensure state updates before redirect
-    setTimeout(() => {
-      // Force redirect to login
-      window.location.href = '/login?logout=true';
-    }, 100);
+    // Use NextAuth's signOut
+    await signOut({ redirect: true, callbackUrl: '/login' });
   };
 
   const getDashboardUrl = () => {
@@ -337,7 +300,7 @@ export default function Header() {
             status: tokenResponse.status,
             statusText: tokenResponse.statusText,
             data: errorData,
-            jwtSessionData,
+            user: session?.user?.email,
             cookies: 'httpOnly cookies (cannot be read from client)',
           });
           
@@ -395,18 +358,15 @@ export default function Header() {
   const handleTrustInnAccess = async (e) => {
     e.preventDefault();
 
-    // Check if JWT session is still loading
-    if (isLoadingSession) {
+    // Check if session is still loading
+    if (status === 'loading') {
       console.warn('Session is still loading, please wait...');
       return;
     }
 
-    // Check JWT authentication (not NextAuth)
+    // Check NextAuth authentication
     if (!isLoggedIn) {
-      console.log('JWT authentication check failed:', {
-        jwtSessionData,
-        isLoggedIn,
-      });
+      console.log('Authentication check failed - not logged in');
       setTrustInnAccessType('not_logged_in');
       setTrustInnModalOpen(true);
       return;

@@ -1,42 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { jwtVerify } from 'jose';
+import { getToken } from 'next-auth/jwt';
 import dbConnect from '@/lib/dbConnect';
 import { RefundRequest } from '@/models/RefundRequest';
 import { Payment } from '@/models/Payment';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'your-secret-key'
-);
-
 export async function GET(request: NextRequest) {
   try {
-    // Extract JWT token from cookies
-    const token = request.cookies.get('accessToken')?.value;
+    // Get token from NextAuth
+    const token = await getToken({ req: request });
 
-    if (!token) {
+    if (!token || !token.email) {
       return NextResponse.json(
-        { error: 'Unauthorized - No token provided' },
-        { status: 401 }
-      );
-    }
-
-    // Verify JWT token
-    let decoded: any;
-    try {
-      const secret = JWT_SECRET;
-      const verified = await jwtVerify(token, secret);
-      decoded = verified.payload;
-    } catch (error) {
-      return NextResponse.json(
-        { error: 'Unauthorized - Invalid token' },
-        { status: 401 }
-      );
-    }
-
-    // Check if token is access token
-    if (decoded.type !== 'access') {
-      return NextResponse.json(
-        { error: 'Unauthorized - Invalid token type' },
+        { error: 'Unauthorized - No valid session' },
         { status: 401 }
       );
     }
@@ -44,7 +19,20 @@ export async function GET(request: NextRequest) {
     // Connect to database
     await dbConnect();
 
-    const userId = decoded.userId;
+    const userEmail = token.email;
+
+    // Get user to find userId
+    const { User } = await import('@/models/User');
+    const user = await User.findOne({ email: userEmail });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const userId = user._id;
 
     // Get query parameters for filtering and pagination
     const url = new URL(request.url);
@@ -55,11 +43,18 @@ export async function GET(request: NextRequest) {
     const pageSize = Math.min(limit, 50); // Max 50 per page
     const skip = (page - 1) * pageSize;
 
-    // Build query
-    const query: any = { userId };
+    // Build query - search by userId or userEmail (backward compatible)
+    const query: any = {
+      $or: [
+        { userId: userId },
+        { userEmail: userEmail }
+      ]
+    };
     if (status) {
       query.status = status;
     }
+
+    console.log('🔍 Fetching refund requests for:', { userEmail, userId, query, page, limit: pageSize });
 
     // Fetch refund requests with pagination
     const refundRequests = await RefundRequest.find(query)
@@ -68,9 +63,11 @@ export async function GET(request: NextRequest) {
       .limit(pageSize)
       .populate({
         path: 'paymentId',
-        select: 'plan amount status completedAt',
+        select: 'planName amount status completedAt',
       })
       .lean();
+
+    console.log('✅ Refund requests found:', refundRequests.length);
 
     // Get total count for pagination
     const total = await RefundRequest.countDocuments(query);

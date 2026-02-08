@@ -3,10 +3,14 @@
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
-import { FiLogOut, FiBarChart, FiUsers, FiCreditCard, FiPieChart, FiSettings, FiUser, FiMenu, FiX } from 'react-icons/fi';
+import { FiLogOut, FiBarChart, FiUsers, FiCreditCard, FiPieChart, FiSettings, FiUser, FiMenu, FiX, FiRotateCw, FiMail, FiFileText } from 'react-icons/fi';
 import AnalyticsDashboard from '@/components/admin/AnalyticsDashboard';
 import UsersManagement from '@/components/admin/UsersManagement';
 import PaymentsManagement from '@/components/admin/PaymentsManagement';
+import RefundManagement from '@/components/admin/RefundManagement';
+import RefundRequestsManagement from '@/components/admin/RefundRequestsManagement';
+import QuotationRequestsManagement from '@/components/admin/QuotationRequestsManagement';
+import Inbox from '@/components/Inbox';
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
@@ -57,12 +61,13 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (isMobile && sidebarOpen) {
       document.body.style.overflow = 'hidden';
+      // Ensure sidebar can still be interacted with
+      return () => {
+        document.body.style.overflow = 'unset';
+      };
     } else {
       document.body.style.overflow = 'unset';
     }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
   }, [isMobile, sidebarOpen]);
 
   useEffect(() => {
@@ -103,8 +108,19 @@ export default function AdminDashboard() {
       {/* Mobile Overlay */}
       {isMobile && sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden cursor-pointer"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setSidebarOpen(false);
+          }}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              setSidebarOpen(false);
+            }
+          }}
         />
       )}
 
@@ -117,6 +133,7 @@ export default function AdminDashboard() {
           bg-white dark:bg-gray-800 shadow-xl transition-all duration-300 
           border-r border-gray-200 dark:border-gray-700
           ${isMobile && !sidebarOpen ? '-translate-x-full' : 'translate-x-0'}
+          pointer-events-auto
         `}
       >
         <div className="flex flex-col h-full">
@@ -177,6 +194,58 @@ export default function AdminDashboard() {
             </button>
             
             <button
+              onClick={() => handleTabChange('refunds')}
+              className={`w-full flex items-center ${sidebarOpen ? 'px-3 sm:px-4 py-2.5 sm:py-3' : 'px-2.5 sm:px-3 py-2.5 sm:py-3 justify-center'} text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 ${
+                activeTab === 'refunds'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white'
+              }`}
+              title={!sidebarOpen ? 'Refunds' : ''}
+            >
+              <FiRotateCw size={16} className="sm:w-[18px] sm:h-[18px] flex-shrink-0" />
+              {sidebarOpen && <span className="ml-2 sm:ml-3 truncate">Refunds</span>}
+            </button>
+
+            <button
+              onClick={() => handleTabChange('refund-requests')}
+              className={`w-full flex items-center ${sidebarOpen ? 'px-3 sm:px-4 py-2.5 sm:py-3' : 'px-2.5 sm:px-3 py-2.5 sm:py-3 justify-center'} text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 ${
+                activeTab === 'refund-requests'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white'
+              }`}
+              title={!sidebarOpen ? 'Refund Requests' : ''}
+            >
+              <FiMail size={16} className="sm:w-[18px] sm:h-[18px] flex-shrink-0" />
+              {sidebarOpen && <span className="ml-2 sm:ml-3 truncate">Refund Requests</span>}
+            </button>
+
+            <button
+              onClick={() => handleTabChange('quotations')}
+              className={`w-full flex items-center ${sidebarOpen ? 'px-3 sm:px-4 py-2.5 sm:py-3' : 'px-2.5 sm:px-3 py-2.5 sm:py-3 justify-center'} text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 ${
+                activeTab === 'quotations'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white'
+              }`}
+              title={!sidebarOpen ? 'Quotations' : ''}
+            >
+              <FiFileText size={16} className="sm:w-[18px] sm:h-[18px] flex-shrink-0" />
+              {sidebarOpen && <span className="ml-2 sm:ml-3 truncate">Quotations</span>}
+            </button>
+
+            <button
+              onClick={() => handleTabChange('inbox')}
+              className={`w-full flex items-center ${sidebarOpen ? 'px-3 sm:px-4 py-2.5 sm:py-3' : 'px-2.5 sm:px-3 py-2.5 sm:py-3 justify-center'} text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 ${
+                activeTab === 'inbox'
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white'
+              }`}
+              title={!sidebarOpen ? 'Inbox' : ''}
+            >
+              <FiMail size={16} className="sm:w-[18px] sm:h-[18px] flex-shrink-0" />
+              {sidebarOpen && <span className="ml-2 sm:ml-3 truncate">Inbox</span>}
+            </button>
+            
+            <button
               onClick={() => handleTabChange('analytics')}
               className={`w-full flex items-center ${sidebarOpen ? 'px-3 sm:px-4 py-2.5 sm:py-3' : 'px-2.5 sm:px-3 py-2.5 sm:py-3 justify-center'} text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 ${
                 activeTab === 'analytics'
@@ -229,7 +298,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Main Content */}
-      <div className={`min-h-screen flex flex-col transition-all duration-300 ${isMobile ? 'ml-0' : (sidebarOpen ? 'ml-64 sm:ml-72' : 'ml-16')}`}>
+      <div className={`min-h-screen flex flex-col transition-all duration-300 ${isMobile ? 'ml-0' : (sidebarOpen ? 'ml-64 sm:ml-72' : 'ml-16')} pointer-events-auto relative`}>
         <div className="flex-1 flex flex-col overflow-y-auto">
           {/* Header */}
           <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
@@ -249,6 +318,10 @@ export default function AdminDashboard() {
                   {activeTab === 'overview' && 'Dashboard Overview'}
                   {activeTab === 'users' && 'User Management'}
                   {activeTab === 'payments' && 'Payment Management'}
+                  {activeTab === 'refunds' && 'Refund Management'}
+                  {activeTab === 'refund-requests' && 'Refund Requests'}
+                  {activeTab === 'quotations' && 'Quotation Requests'}
+                  {activeTab === 'inbox' && 'Inbox'}
                   {activeTab === 'analytics' && 'Analytics & Reports'}
                   {activeTab === 'settings' && 'Admin Settings'}
                 </h2>
@@ -262,6 +335,10 @@ export default function AdminDashboard() {
               {activeTab === 'overview' && <AnalyticsDashboard />}
               {activeTab === 'users' && <UsersManagement />}
               {activeTab === 'payments' && <PaymentsManagement />}
+              {activeTab === 'refunds' && <RefundManagement />}
+              {activeTab === 'refund-requests' && <RefundRequestsManagement />}
+              {activeTab === 'quotations' && <QuotationRequestsManagement />}
+              {activeTab === 'inbox' && <Inbox role="admin" />}
               {activeTab === 'analytics' && <AnalyticsDashboard />}
               {activeTab === 'settings' && (
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4 sm:p-6">

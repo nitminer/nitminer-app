@@ -1,5 +1,4 @@
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getToken } from 'next-auth/jwt';
 import dbConnect from '@/lib/dbConnect';
 import { User } from '@/models/User';
 import { Payment } from '@/models/Payment';
@@ -8,9 +7,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const token = await getToken({ req });
 
-    if (!session?.user?.id || session.user.role !== 'admin') {
+    if (!token || token.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

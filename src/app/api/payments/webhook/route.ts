@@ -92,9 +92,9 @@ async function handlePaymentSuccess(event: any) {
     }
 
     // Find and update user subscription
-    const user = await User.findById(payment.userId);
+    const user = await User.findOne({ email: payment.userEmail });
     if (!user) {
-      console.error('❌ User not found:', payment.userId);
+      console.error('❌ User not found:', payment.userEmail);
       return;
     }
 
@@ -102,17 +102,17 @@ async function handlePaymentSuccess(event: any) {
     const now = new Date();
     let endDate = new Date(now);
 
-    if (payment.plan === '1_month') {
+    if (payment.planDuration === '1_month') {
       endDate.setMonth(now.getMonth() + 1);
-    } else if (payment.plan === '6_months') {
+    } else if (payment.planDuration === '6_months') {
       endDate.setMonth(now.getMonth() + 6);
-    } else if (payment.plan === '12_months') {
+    } else if (payment.planDuration === '12_months') {
       endDate.setFullYear(now.getFullYear() + 1);
     }
 
     user.isPremium = true;
     user.subscription = {
-      plan: payment.plan,
+      plan: payment.planDuration, // Use planDuration (1_month, 6_months, 12_months) not planName
       status: 'active',
       startDate: now,
       endDate: endDate,
@@ -152,7 +152,7 @@ async function handlePaymentSuccess(event: any) {
         customerName: user.name,
         customerEmail: user.email,
         customerId: user._id.toString(),
-        serviceDescription: `${payment.plan.replace('_', ' ').toUpperCase()} Premium Subscription`,
+        serviceDescription: `${payment.planName} - ${payment.planDuration.replace(/_/g, ' ').toUpperCase()} Premium Subscription`,
         amountInRupees: payment.amount * 100,
         paymentMethod: paymentMethod,
         transactionId: paymentEntity.id,
@@ -167,7 +167,7 @@ async function handlePaymentSuccess(event: any) {
           year: 'numeric'
         }),
         paymentStatus: 'Success',
-        duration: payment.plan === '1_month' ? 1 : payment.plan === '6_months' ? 6 : 12,
+        duration: payment.planDuration === '1_month' ? 1 : payment.planDuration === '6_months' ? 6 : 12,
       };
 
       console.log('✅ Receipt data prepared:', {
@@ -187,8 +187,8 @@ async function handlePaymentSuccess(event: any) {
       await sendPaymentSuccessEmail(
         user.email,
         user.name,
-        payment.amount,
-        payment.plan.replace('_', ' ').toUpperCase(),
+        payment.amount / 100, // Convert paise to rupees for display
+        `${payment.planName} - ${payment.planDuration.replace(/_/g, ' ').toUpperCase()}`,
         receiptUrl,
         user.subscription!.endDate.toLocaleDateString('en-IN', {
           day: '2-digit',

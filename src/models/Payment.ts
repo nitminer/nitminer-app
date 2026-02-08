@@ -1,11 +1,14 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IPayment extends Document {
-  userId: mongoose.Types.ObjectId;
-  plan: '1_month' | '6_months' | '12_months';
+  userId?: mongoose.Types.ObjectId;
+  userEmail: string;
+  customerName?: string; // Customer name for receipt
+  planName: string; // 'pro', 'agency', 'startup', etc.
+  planDuration: '1_month' | '6_months' | '12_months'; // Plan duration mapping
   amount: number;
   paymentMethod: 'razorpay' | 'card' | 'upi';
-  paymentId: string;
+  paymentId?: string; // Only set after payment verification
   orderId?: string;
   invoiceUrl?: string;
   status: 'success' | 'pending' | 'failed';
@@ -20,9 +23,22 @@ const paymentSchema = new Schema<IPayment>(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
+    },
+    userEmail: {
+      type: String,
+      required: true,
+      lowercase: true,
+      index: true,
+    },
+    customerName: {
+      type: String,
+      default: null,
+    },
+    planName: {
+      type: String,
       required: true,
     },
-    plan: {
+    planDuration: {
       type: String,
       enum: ['1_month', '6_months', '12_months'],
       required: true,
@@ -38,8 +54,8 @@ const paymentSchema = new Schema<IPayment>(
     },
     paymentId: {
       type: String,
-      required: true,
-      unique: true,
+      sparse: true,
+      index: true,
     },
     orderId: {
       type: String,
@@ -70,7 +86,6 @@ const paymentSchema = new Schema<IPayment>(
 );
 
 // Index for faster queries
-paymentSchema.index({ userId: 1 });
 paymentSchema.index({ status: 1 });
 paymentSchema.index({ createdAt: -1 });
 

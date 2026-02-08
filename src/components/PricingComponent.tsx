@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, X } from 'lucide-react';
+import { Check, X, MessageSquare } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useSession } from 'next-auth/react';
+import QuotationModal from './QuotationModal';
 
 interface PricingPlan {
   _id: string;
@@ -47,6 +48,10 @@ export default function DynamicPricingPage() {
   const [processingMessage, setProcessingMessage] = useState('');
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'sixMonth' | 'yearly'>('yearly');
   const scriptRef = useRef<HTMLScriptElement | null>(null);
+  
+  // Quotation modal state
+  const [showQuotationModal, setShowQuotationModal] = useState(false);
+  const [selectedPlanForQuotation, setSelectedPlanForQuotation] = useState<PricingPlan | null>(null);
 
   useEffect(() => {
     const initializeData = async () => {
@@ -228,16 +233,22 @@ export default function DynamicPricingPage() {
           amount: amountInPaise,
           duration,
           durationUnit,
-          planDisplayName: plan.displayName
+          planDisplayName: plan.displayName,
+          customerName: session.user.name || session.user.email
         })
       });
 
       console.log('Payment initiate response status:', orderResponse.status);
 
       if (!orderResponse.ok) {
-        const errorData = await orderResponse.json();
+        let errorData;
+        try {
+          errorData = await orderResponse.json();
+        } catch {
+          errorData = { error: `Server error: ${orderResponse.status} ${orderResponse.statusText}` };
+        }
         console.error('Payment initiate error:', errorData);
-        setError(errorData.error || 'Failed to initiate payment');
+        setError(errorData.error || `Failed to initiate payment (${orderResponse.status})`);
         setIsProcessing(false);
         return;
       }
@@ -280,6 +291,19 @@ export default function DynamicPricingPage() {
 
             setTimeout(async () => {
               try {
+                // Refresh user status after payment
+                const statusResponse = await fetch('/api/auth/verify-status', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include'
+                });
+
+                if (statusResponse.ok) {
+                  const updatedStatus = await statusResponse.json();
+                  setUserStatus(updatedStatus);
+                  console.log('✅ User status refreshed after payment:', updatedStatus);
+                }
+
                 // Generate JWT token for TrustInn access
                 const tokenResponse = await fetch('/api/auth/generate-token', {
                   method: 'POST',
@@ -560,18 +584,35 @@ export default function DynamicPricingPage() {
                     </p>
                   </div>
 
-                  {/* CTA Button */}
-                  <button
-                    onClick={() => handleUpgrade(plan._id)}
-                    disabled={isCurrentPlan || userStatus?.hasPremium}
-                    className={`w-full py-3 rounded-lg font-semibold mb-6 sm:mb-8 transition text-sm sm:text-base ${
-                      isCurrentPlan
-                        ? 'bg-slate-600/50 text-slate-300 cursor-not-allowed'
-                        : `${colors.button} text-white`
-                    }`}
-                  >
-                    {isCurrentPlan ? '✓ Current Plan' : 'Upgrade Now'}
-                  </button>
+                  {/* CTA Buttons */}
+                  <div className="space-y-3 mb-6 sm:mb-8">
+                    <button
+                      onClick={() => handleUpgrade(plan._id)}
+                      disabled={isCurrentPlan || userStatus?.hasPremium}
+                      className={`w-full py-3 rounded-lg font-semibold transition text-sm sm:text-base ${
+                        isCurrentPlan
+                          ? 'bg-slate-600/50 text-slate-300 cursor-not-allowed'
+                          : `${colors.button} text-white`
+                      }`}
+                    >
+                      {isCurrentPlan ? '✓ Current Plan' : 'Upgrade Now'}
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        setSelectedPlanForQuotation(plan);
+                        setShowQuotationModal(true);
+                      }}
+                      className={`w-full py-2.5 rounded-lg font-semibold transition text-sm sm:text-base flex items-center justify-center gap-2 ${
+                        isDark 
+                          ? 'bg-slate-700/50 hover:bg-slate-700 text-slate-300 border border-slate-600' 
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300'
+                      }`}
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      Request Quotation
+                    </button>
+                  </div>
 
                   {/* Key Metrics */}
                   <div className={`space-y-3 mb-6 sm:mb-8 pb-6 sm:pb-8 border-b ${
@@ -641,6 +682,31 @@ export default function DynamicPricingPage() {
           })}
         </div>
       </div>
+
+      {/* Quotation Modal */}
+      {selectedPlanForQuotation && (
+        <QuotationModal
+          isOpen={showQuotationModal}
+          onClose={() => {
+            setShowQuotationModal(false);
+            setSelectedPlanForQuotation(null);
+          }}
+          planName={selectedPlanForQuotation.planName}
+          planDuration={billingPeriod === 'monthly' ? '1 month' : billingPeriod === 'sixMonth' ? '6 months' : '1 year'}
+          numberOfTools={selectedPlanForQuotation.toolsIncluded.filter(t => t.available).length}
+          estimatedPrice={
+            billingPeriod === 'monthly'
+              ? selectedPlanForQuotation.monthlyPrice * 100
+              : billingPeriod === 'sixMonth'
+              ? selectedPlanForQuotation.sixMonthPrice * 100
+              : selectedPlanForQuotation.yearlyPrice * 100
+          }
+          onSuccess={() => {
+            // Refresh or show success message
+            alert('Quotation request submitted successfully!');
+          }}
+        />
+      )}
 
       {/* Processing Modal */}
       {isProcessing && (

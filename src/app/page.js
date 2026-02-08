@@ -20,7 +20,7 @@ export default function Home() {
         </section>
 
         {/* Carousel Section - Commented Out */}
-        <h1>updating now at morning am</h1>
+        <h1>updating now at morning now</h1>
         {/* About Us Section */}
         <section className="w-full">
           <AboutUs />

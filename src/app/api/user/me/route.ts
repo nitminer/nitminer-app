@@ -3,52 +3,29 @@ import { User } from '@/models/User';
 import { Payment } from '@/models/Payment';
 import { NextRequest, NextResponse } from 'next/server';
 import { Types } from 'mongoose';
-import jwt from 'jsonwebtoken';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function GET(req: NextRequest) {
   try {
-    // Extract JWT token from cookies
-    const accessToken = req.cookies.get('accessToken')?.value;
+    console.log('[API /user/me] GET request received');
+    
+    // Use getServerSession - the official NextAuth method
+    const session = await getServerSession(authOptions);
 
-    if (!accessToken) {
-      console.log('No access token found in cookies');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const secret = process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET;
-    if (!secret) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
-
-    let decoded;
-    try {
-      decoded = jwt.verify(accessToken, secret) as any;
-    } catch (error) {
-      console.log('Token verification failed:', error);
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (decoded.type !== 'access') {
-      console.log('Invalid token type:', decoded.type);
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = decoded.userId;
-    const userEmail = decoded.email;
-
-    console.log('GET /api/user/me - Session:', {
-      hasSession: true,
-      userId,
-      userEmail,
+    console.log('[API /user/me] Session result:', {
+      hasSession: !!session,
+      userId: session?.user?.id,
+      userEmail: session?.user?.email,
     });
 
-    if (!userId) {
-      console.log('No userId found in token - returning 401');
+    if (!session?.user?.id) {
+      console.log('[API /user/me] No valid session');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const userId = session.user.id;
+    const userEmail = session.user.email;
 
     await dbConnect();
 
@@ -77,7 +54,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       user: {
         id: user._id,
-        name: user.name,
+        name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email?.split('@')[0] || 'User',
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
         role: user.role,
         isPremium: user.isPremium,
@@ -93,39 +72,18 @@ export async function GET(req: NextRequest) {
 }
 export async function PATCH(req: NextRequest) {
   try {
-    // Extract JWT token from cookies
-    const accessToken = req.cookies.get('accessToken')?.value;
+    // Use getServerSession - the official NextAuth method
+    const session = await getServerSession(authOptions);
 
-    if (!accessToken) {
-      console.log('No access token found in cookies');
+    if (!session?.user?.id) {
+      console.log('[API /user/me PATCH] No valid session');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const secret = process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET;
-    if (!secret) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
+    const userId = session.user.id;
+    const userEmail = session.user.email;
 
-    let decoded;
-    try {
-      decoded = jwt.verify(accessToken, secret) as any;
-    } catch (error) {
-      console.log('Token verification failed:', error);
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (decoded.type !== 'access') {
-      console.log('Invalid token type:', decoded.type);
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = decoded.userId;
-    const userEmail = decoded.email;
-
-    console.log('PATCH /api/user/me - Session:', {
+    console.log('[API /user/me PATCH] Session:', {
       hasSession: true,
       userId,
       userEmail,
@@ -168,7 +126,9 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({
       user: {
         id: user._id,
-        name: user.name,
+        name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email?.split('@')[0] || 'User',
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
         role: user.role,
         isPremium: user.isPremium,

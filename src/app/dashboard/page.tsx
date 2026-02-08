@@ -9,7 +9,9 @@ import ProfileTab from '@/components/dashboard/ProfileTab';
 import PaymentsTab from '@/components/dashboard/PaymentsTab';
 import UsageTab from '@/components/dashboard/UsageTab';
 import RefundTab from '@/components/dashboard/RefundTab';
+import MyQuotations from '@/components/dashboard/MyQuotations';
 import Header from '@/components/Header';
+import Inbox from '@/components/Inbox';
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
@@ -93,19 +95,24 @@ export default function DashboardPage() {
       }
     }
 
+    console.log('[Dashboard] Auth check:', { status, isAuthenticated: !!session?.user, isRecentLogin, loginTime });
+
     // If we have valid stored session, allow access
     if (checkStoredSession()) {
+      console.log('[Dashboard] Using stored session');
       return;
     }
 
     // If NextAuth says authenticated, we're good
     if (status === 'authenticated' && session?.user) {
+      console.log('[Dashboard] NextAuth authenticated, allowing access');
       return;
     }
 
     // If not authenticated and no valid stored session and not recent login, redirect to login
     if (status === 'unauthenticated' && !isRecentLogin) {
       // Clear login success flag
+      console.log('[Dashboard] Unauthenticated and not recent login, redirecting to /login');
       localStorage.removeItem('login_success');
       localStorage.removeItem('login_time');
       
@@ -115,12 +122,18 @@ export default function DashboardPage() {
 
     // If authenticated but admin, redirect to admin dashboard
     if (status === 'authenticated' && session?.user?.role === 'admin') {
+      console.log('[Dashboard] Admin user, redirecting to admin dashboard');
       router.push('/admin/dashboard');
       return;
     }
 
+    if (isRecentLogin) {
+      console.log('[Dashboard] Recent login, showing loading state');
+    }
+
     // Clear login success flag once we're properly authenticated
     if (status === 'authenticated') {
+      console.log('[Dashboard] Clearing login success flags after authentication');
       localStorage.removeItem('login_success');
       localStorage.removeItem('login_time');
     }
@@ -182,7 +195,9 @@ export default function DashboardPage() {
             { id: 'profile', label: 'Profile' },
             { id: 'payments', label: 'Payments' },
             { id: 'refund', label: 'Refunds' },
+            { id: 'quotations', label: 'Quotations' },
             { id: 'usage', label: 'Usage' },
+            { id: 'inbox', label: 'Inbox' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -203,7 +218,9 @@ export default function DashboardPage() {
         {activeTab === 'profile' && <ProfileTab />}
         {activeTab === 'payments' && <PaymentsTab />}
         {activeTab === 'refund' && <RefundTab />}
+        {activeTab === 'quotations' && <MyQuotations />}
         {activeTab === 'usage' && <UsageTab />}
+        {activeTab === 'inbox' && <Inbox role="user" />}
       </DashboardLayout>
     </>
   );

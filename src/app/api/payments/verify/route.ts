@@ -1,10 +1,10 @@
+import { getToken } from 'next-auth/jwt';
 import dbConnect from '@/lib/dbConnect';
-import { User } from '@/models/User';
 import { Payment } from '@/models/Payment';
+import { User } from '@/models/User';
 import Razorpay from 'razorpay';
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import jwt from 'jsonwebtoken';
 import { generateHTMLPDFReceiptBuffer } from '@/lib/receiptGenerator';
 import { uploadReceiptToCloudinary } from '@/lib/cloudinary';
 import { sendPaymentSuccessEmail } from '@/lib/email';
@@ -16,38 +16,17 @@ const razorpay = new Razorpay({
 
 export async function POST(req: NextRequest) {
   try {
-    // Extract JWT token from cookies
-    const accessToken = req.cookies.get('accessToken')?.value;
+    // Get token from NextAuth session
+    const token = await getToken({ req });
 
-    if (!accessToken) {
-      console.log('Payment verify - No access token found');
+    if (!token?.email) {
+      console.log('Payment verify - No session found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const secret = process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET;
-    if (!secret) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
+    const userEmail = token.email;
 
-    let decoded;
-    try {
-      decoded = jwt.verify(accessToken, secret) as any;
-    } catch (error) {
-      console.log('Payment verify - Token verification failed');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (decoded.type !== 'access' || !decoded.email) {
-      console.log('Payment verify - Invalid token');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userEmail = decoded.email;
-
-    console.log('Payment verify - Session:', userEmail, 'ID:', decoded.userId);
+    console.log('Payment verify - Session:', userEmail);
 
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = await req.json();
 
@@ -72,8 +51,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify payment with Razorpay API to ensure it was actually captured
+    let paymentDetails: any;
     try {
-      const paymentDetails = await razorpay.payments.fetch(razorpay_payment_id);
+      paymentDetails = await razorpay.payments.fetch(razorpay_payment_id);
       
       console.log('💳 Razorpay Payment Details:', {
         id: paymentDetails.id,
@@ -105,7 +85,7 @@ export async function POST(req: NextRequest) {
 
     // Find and update payment record
     const payment = await Payment.findOneAndUpdate(
-      { orderId: razorpay_order_id },
+      { orderId: razorpay_order_id, userEmail },
       {
         paymentId: razorpay_payment_id,
         status: 'success',
@@ -119,59 +99,40 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Payment record not found' }, { status: 404 });
     }
 
-    // Update user subscription
-    const user = await User.findById(decoded.userId);
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+    console.log('✅ Payment verified successfully');
 
-    // Calculate subscription end date based on plan
+    // Fetch user details for email and update premium status
+    const user = await User.findOne({ email: userEmail });
+    const userName = user?.name || userEmail.split('@')[0];
+
+    // Calculate subscription end date
     const now = new Date();
-    let endDate = new Date(now);
-
-    if (payment.plan === '1_month') {
+    const endDate = new Date(now);
+    if (payment.planDuration === '1_month') {
       endDate.setMonth(now.getMonth() + 1);
-    } else if (payment.plan === '6_months') {
+    } else if (payment.planDuration === '6_months') {
       endDate.setMonth(now.getMonth() + 6);
-    } else if (payment.plan === '12_months') {
+    } else {
       endDate.setFullYear(now.getFullYear() + 1);
     }
 
-    user.isPremium = true;
-    user.subscription = {
-      plan: payment.plan,
-      status: 'active',
-      startDate: now,
-      endDate: endDate,
-      paymentId: payment._id,
-    };
+    // Update user premium status and subscription
+    if (user) {
+      user.isPremium = true;
+      user.subscription = {
+        plan: payment.planDuration, // Use planDuration (1_month, 6_months, 12_months) not planName
+        status: 'active',
+        startDate: now,
+        endDate: endDate,
+        paymentId: payment._id,
+      };
+      await user.save();
+      console.log('✅ User premium status updated');
+    }
 
-    await user.save();
-
-    // Generate and send receipt
+    // Generate receipt and send email
     try {
       console.log('🧾 Generating payment receipt...');
-
-      // Map Razorpay payment method to readable format
-      const paymentMethodMap: { [key: string]: string } = {
-        'card': 'Credit/Debit Card',
-        'upi': 'UPI',
-        'netbanking': 'Net Banking',
-        'wallet': 'Wallet',
-        'emandate': 'E-Mandate',
-        'paylater': 'Buy Now Pay Later',
-      };
-
-      // Determine payment method (fetch from Razorpay API if available)
-      let paymentMethod = 'Online Payment';
-      try {
-        const fetchedPayment = await razorpay.payments.fetch(razorpay_payment_id);
-        if (fetchedPayment.method) {
-          paymentMethod = paymentMethodMap[fetchedPayment.method] || fetchedPayment.method;
-        }
-      } catch (err) {
-        console.warn('⚠️ Could not fetch payment details:', err);
-      }
 
       const receiptData = {
         receiptNumber: `TI-${Date.now()}-${payment._id.toString().slice(-6).toUpperCase()}`,
@@ -185,65 +146,65 @@ export async function POST(req: NextRequest) {
           minute: '2-digit',
           second: '2-digit',
         }),
-        customerName: user.name,
-        customerEmail: user.email,
-        customerId: user._id.toString(),
-        serviceDescription: `${payment.plan.replace('_', ' ').toUpperCase()} Premium Subscription`,
-        amountInRupees: payment.amount * 100, // Convert back to paise for display
-        paymentMethod: paymentMethod,
+        customerName: userName,
+        customerEmail: userEmail,
+        customerId: payment._id.toString(),
+        serviceDescription: `${payment.planName} - ${payment.planDuration.replace(/_/g, ' ').toUpperCase()} Premium Subscription`,
+        amountInRupees: payment.amount, // Already in paise from frontend
+        paymentMethod: paymentDetails.method || 'Online Payment',
         transactionId: razorpay_payment_id,
-        serviceStartDate: user.subscription!.startDate.toLocaleDateString('en-IN', {
+        serviceStartDate: new Date().toLocaleDateString('en-IN', {
           day: '2-digit',
           month: 'short',
           year: 'numeric'
         }),
-        serviceEndDate: user.subscription!.endDate.toLocaleDateString('en-IN', {
+        serviceEndDate: new Date(Date.now() + (payment.planDuration === '1_month' ? 30 : payment.planDuration === '6_months' ? 180 : 365) * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN', {
           day: '2-digit',
           month: 'short',
           year: 'numeric'
         }),
         paymentStatus: 'Success',
-        duration: payment.plan === '1_month' ? 1 : payment.plan === '6_months' ? 6 : 12,
+        duration: payment.planDuration === '1_month' ? 1 : payment.planDuration === '6_months' ? 6 : 12,
       };
 
-      // Generate PDF receipt
       const pdfBuffer = await generateHTMLPDFReceiptBuffer(receiptData);
-
-      // Upload to Cloudinary
       const fileName = `receipt-${payment._id}-${Date.now()}.pdf`;
       const receiptUrl = await uploadReceiptToCloudinary(pdfBuffer, fileName);
 
-      // Update payment record with receipt URL
+      // Update payment with receipt URL
       await Payment.findByIdAndUpdate(payment._id, {
         invoiceUrl: receiptUrl,
       });
 
-      // Send email with payment receipt
+      // Send email with receipt
       await sendPaymentSuccessEmail(
-        user.email,
-        user.name,
-        payment.amount,
-        payment.plan.replace('_', ' ').toUpperCase(),
+        userEmail,
+        userName,
+        payment.amount / 100, // Convert paise to rupees for display
+        `${payment.planName} - ${payment.planDuration.replace(/_/g, ' ').toUpperCase()}`,
         receiptUrl,
-        user.subscription!.endDate.toLocaleDateString('en-IN', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric'
-        }),
+        receiptData.serviceEndDate,
         razorpay_payment_id,
-        paymentMethod
+        receiptData.paymentMethod
       );
 
-      console.log('✅ Receipt generated and email sent');
-    } catch (receiptError) {
-      console.error('❌ Error generating/sending receipt:', receiptError);
-      // Don't fail the payment verification if receipt generation fails
+      console.log('✅ Payment receipt generated and email sent to:', userEmail);
+    } catch (emailError) {
+      console.error('⚠️ Error sending payment email:', emailError);
+      // Don't fail the payment verification if email fails
+      // The payment is already verified and stored
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Payment verified and subscription activated',
-      subscription: user.subscription,
+      message: 'Payment verified successfully',
+      payment: {
+        id: payment._id,
+        amount: payment.amount,
+        planName: payment.planName,
+        planDuration: payment.planDuration,
+        status: 'success',
+      },
     });
   } catch (error) {
     console.error('Payment verification error:', error);

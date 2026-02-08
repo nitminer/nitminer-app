@@ -22,40 +22,26 @@ export default function ProfileTab() {
 
   const fetchUserProfile = async () => {
     try {
-      const storedSession = localStorage.getItem('nitminer_session') || sessionStorage.getItem('nitminer_session');
-      
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      
-      if (storedSession) {
-        headers['x-nitminer-session'] = storedSession;
-      }
-
       const response = await fetch('/api/user/me', {
-        headers,
+        credentials: 'include',
       });
+      
+      console.log('[ProfileTab] API response status:', response.status);
       
       if (response.ok) {
         const data = await response.json();
+        console.log('[ProfileTab] User data loaded:', data.user?.email);
         setUser(data.user);
-      } else if (storedSession) {
-        try {
-          const sessionData = JSON.parse(storedSession);
-          if (sessionData.user?.email) {
-            const userResponse = await fetch('/api/user/profile', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-nitminer-session': storedSession,
-              },
-              body: JSON.stringify({ email: sessionData.user.email }),
-            });
-            
-            if (userResponse.ok) {
-              const userData = await userResponse.json();
-              setUser(userData.user);
-            } else {
+      } else {
+        const errorData = await response.json();
+        console.error('[ProfileTab] API error:', response.status, errorData);
+        
+        // Fallback to stored session
+        const storedSession = localStorage.getItem('nitminer_session') || sessionStorage.getItem('nitminer_session');
+        if (storedSession) {
+          try {
+            const sessionData = JSON.parse(storedSession);
+            if (sessionData.user?.email) {
               setUser({
                 name: sessionData.user.name || sessionData.user.email?.split('@')[0] || 'User',
                 email: sessionData.user.email,
@@ -65,23 +51,15 @@ export default function ProfileTab() {
                 subscriptionExpiry: null,
               });
             }
+          } catch (parseError) {
+            console.warn('Error parsing stored session:', parseError);
           }
-        } catch (error) {
-          console.warn('Error fetching user by email:', error);
-          const sessionData = JSON.parse(storedSession);
-          setUser({
-            name: sessionData.user.name || sessionData.user.email?.split('@')[0] || 'User',
-            email: sessionData.user.email,
-            role: sessionData.user.role || 'user',
-            isPremium: false,
-            trialCount: 5,
-            subscriptionExpiry: null,
-          });
         }
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('[ProfileTab] Fetch error:', error);
       
+      // Fallback to stored session
       try {
         const storedSession = localStorage.getItem('nitminer_session') || sessionStorage.getItem('nitminer_session');
         if (storedSession) {
@@ -96,7 +74,7 @@ export default function ProfileTab() {
           });
         }
       } catch (fallbackError) {
-        console.warn('Fallback also failed:', fallbackError);
+        console.warn('[ProfileTab] Fallback also failed:', fallbackError);
       }
     } finally {
       setLoading(false);

@@ -6,24 +6,22 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
   try {
+    let userEmail = '';
     let session = await getServerSession(authOptions);
-    let userId = session?.user?.id;
+    
+    if (session?.user?.email) {
+      userEmail = session.user.email;
+    }
 
     // If no NextAuth session, check for stored session
-    if (!userId) {
+    if (!userEmail) {
       const storedSession = req.headers.get('x-nitminer-session');
 
       if (storedSession) {
         try {
           const sessionData = JSON.parse(storedSession);
           if (sessionData.user?.email) {
-            // Find user by email from stored session
-            await dbConnect();
-            const { User } = await import('@/models/User');
-            const user = await User.findOne({ email: sessionData.user.email }).lean();
-            if (user) {
-              userId = user._id.toString();
-            }
+            userEmail = sessionData.user.email;
           }
         } catch (error) {
           console.warn('Error parsing stored session:', error);
@@ -31,7 +29,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    if (!userId) {
+    if (!userEmail) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -42,13 +40,13 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
 
-    const payments = await Payment.find({ userId: userId, status: 'success' })
+    const payments = await Payment.find({ userEmail: userEmail, status: 'success' })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean();
 
-    const total = await Payment.countDocuments({ userId: userId, status: 'success' });
+    const total = await Payment.countDocuments({ userEmail: userEmail, status: 'success' });
 
     return NextResponse.json({
       payments,

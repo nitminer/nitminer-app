@@ -1,30 +1,28 @@
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getToken } from 'next-auth/jwt';
 import dbConnect from '@/lib/dbConnect';
 import { Payment } from '@/models/Payment';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const token = await getToken({ req });
 
-    if (!session?.user?.id || session.user.role !== 'admin') {
+    if (!token?.email || token.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await dbConnect();
 
     const payments = await Payment.find({ status: 'success' })
-      .populate('userId', 'name email')
       .sort({ createdAt: -1 })
       .lean();
 
     // Format data for CSV export
     const csvData = payments.map((payment: any) => ({
       'Payment ID': payment.paymentId,
-      'User': payment.userId.name,
-      'Email': payment.userId.email,
-      'Plan': payment.plan,
+      'Email': payment.userEmail,
+      'Plan': payment.planName,
+      'Duration': payment.planDuration,
       'Amount': `₹${(payment.amount / 100).toFixed(2)}`,
       'Date': new Date(payment.createdAt).toLocaleDateString(),
       'Status': payment.status,

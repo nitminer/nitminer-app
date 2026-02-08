@@ -54,8 +54,10 @@ export const authOptions: NextAuthOptions = {
               console.log('Creating admin user');
               // Create demo admin user if it doesn't exist
               adminUser = new User({
-                name: 'Demo Admin',
+                firstName: 'Demo',
+                lastName: 'Admin',
                 email: 'admin@nitminer.com',
+                phone: '+1-000-000-0000',
                 password: await bcrypt.hash('12345678', 12),
                 role: 'admin',
                 subscription: 'free',
@@ -70,7 +72,9 @@ export const authOptions: NextAuthOptions = {
             return {
               id: adminUser._id.toString(),
               email: adminUser.email,
-              name: adminUser.name,
+              name: `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim() || 'Admin',
+              firstName: adminUser.firstName,
+              lastName: adminUser.lastName,
               role: adminUser.role,
             };
           }
@@ -101,7 +105,9 @@ export const authOptions: NextAuthOptions = {
           return {
             id: user._id.toString(),
             email: user.email,
-            name: user.name,
+            name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email?.split('@')[0],
+            firstName: user.firstName,
+            lastName: user.lastName,
             role: user.role,
           };
         } catch (error) {
@@ -120,11 +126,32 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user, account }: any) {
+      console.log('[NEXTAUTH JWT] Called with:', {
+        hasUser: !!user,
+        userId: user?.id,
+        hasAccount: !!account,
+        tokenId: token?.id,
+      });
+      
       if (user) {
+        console.log('[NEXTAUTH JWT] User provided, storing in token:', {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+        });
+        
         token.id = user.id;
         token.role = user.role;
-        token.email = user.email; // CRITICAL: Store email in token so it's available in session
-        console.log('JWT callback - user provided:', { id: user.id, role: user.role, email: user.email });
+        token.email = user.email;
+        token.name = user.name;
+        token.firstName = user.firstName;
+        token.lastName = user.lastName;
+      } else {
+        console.log('[NEXTAUTH JWT] No user, token remains:', {
+          id: token?.id,
+          email: token?.email,
+        });
       }
 
       // Handle legacy "demo-admin" ID in existing tokens
@@ -181,74 +208,46 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }: any) {
-      // Ensure user object exists
+      console.log('[NEXTAUTH SESSION] Called with token:', {
+        hasToken: !!token,
+        tokenKeys: token ? Object.keys(token) : [],
+        id: token?.id,
+        email: token?.email,
+      });
+      
+      // ALWAYS ensure session.user exists
+      if (!session) {
+        session = { user: {} };
+      }
       if (!session.user) {
         session.user = {};
       }
 
-      // Always preserve email from token (should be there after JWT callback)
-      if (token.email) {
-        session.user.email = token.email;
-      }
-
-      // Always populate id and role from token
-      if (token.id === 'demo-admin') {
-        try {
-          await dbConnect();
-          const adminUser = await User.findOne({ email: 'admin@nitminer.com' });
-          if (adminUser) {
-            session.user.id = adminUser._id.toString();
-            session.user.role = adminUser.role;
-            session.user.isPremium = adminUser.isPremium;
-            session.user.trialCount = adminUser.trialCount;
-            session.user.email = adminUser.email; // Ensure email is set
-          } else {
-            // If no admin user exists, don't include them
-            session.user.id = null;
-            session.user.role = null;
-            session.user.isPremium = false;
-            session.user.trialCount = 0;
-          }
-        } catch (error) {
-          console.error('Error handling legacy admin ID:', error);
-          session.user.id = token.id;
-          session.user.role = 'user';
-          session.user.isPremium = false;
-          session.user.trialCount = 0;
-        }
-      } else if (token.id) {
-        session.user.id = token.id as string;
-        session.user.role = (token.role as string) || 'user';
+      // ALWAYS populate from token if token exists
+      if (token) {
+        console.log('[NEXTAUTH SESSION] Populating session.user from token:', {
+          id: token.id,
+          email: token.email,
+          name: token.name,
+        });
         
-        // Fetch user data to get premium status and trial count
-        try {
-          await dbConnect();
-          const user = await User.findById(token.id);
-          if (user) {
-            session.user.isPremium = user.isPremium;
-            session.user.trialCount = user.trialCount;
-            // Also ensure email from database
-            if (!session.user.email) {
-              session.user.email = user.email;
-            }
-          } else {
-            session.user.isPremium = false;
-            session.user.trialCount = 0;
-          }
-        } catch (error) {
-          console.error('Error fetching user data in session callback:', error);
-          session.user.isPremium = false;
-          session.user.trialCount = 0;
-        }
+        session.user.id = token.id;
+        session.user.email = token.email;
+        session.user.name = token.name;
+        session.user.role = token.role || 'user';
+        session.user.firstName = token.firstName;
+        session.user.lastName = token.lastName;
+      } else {
+        console.error('[NEXTAUTH SESSION] No token provided!');
       }
 
-      console.log('Session callback result:', {
+      console.log('[NEXTAUTH SESSION] Returning session:', {
+        hasUser: !!session.user,
+        userId: session.user?.id,
         email: session.user?.email,
-        id: session.user?.id,
-        role: session.user?.role,
-        isPremium: session.user?.isPremium,
-        trialCount: session.user?.trialCount,
+        name: session.user?.name,
       });
+      
       return session;
     },
   },

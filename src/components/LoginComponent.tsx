@@ -105,18 +105,25 @@ export default function LoginComponent() {
       if (result?.ok) {
         // Success - NextAuth will handle the session
         setSuccess(true);
+        console.log('Login successful, redirecting to dashboard...');
         
         // Clear form
         setFormData({ email: '', password: '', rememberMe: false });
         
-        // Redirect based on user role after a short delay
+        // Set login success flags for dashboard and middleware
+        localStorage.setItem('login_success', 'true');
+        localStorage.setItem('login_time', new Date().toISOString());
+        
+        // Set cookie for middleware (expires in 1 minute)
+        document.cookie = `login_success=true; path=/; max-age=60`;
+        
+        // Redirect using window.location for more reliable navigation
         setTimeout(() => {
-          router.push('/dashboard');
-        }, 1000);
+          console.log('Redirecting to dashboard now...');
+          window.location.href = '/dashboard';
+        }, 300);
+        return;
       }
-
-      // Redirect to homepage
-      router.push('/');
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.');
     } finally {

@@ -1,31 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
+import { getToken } from 'next-auth/jwt';
 
 export async function GET(req: NextRequest) {
   try {
-    // Extract JWT token from cookies
-    const accessToken = req.cookies.get('accessToken')?.value;
+    // Get NextAuth session
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
 
-    if (!accessToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const secret = process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET;
-    if (!secret) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
-
-    let decoded;
-    try {
-      decoded = jwt.verify(accessToken, secret) as any;
-    } catch (error) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (decoded.type !== 'access' || !decoded.userId) {
+    if (!token?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

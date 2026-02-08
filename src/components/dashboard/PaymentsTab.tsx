@@ -5,8 +5,9 @@ import { Download, DollarSign, CreditCard, Calendar, Receipt } from 'lucide-reac
 
 interface Payment {
   _id: string;
-  plan: string;
-  amount: number;
+  planName: string;
+  planDuration: '1_month' | '6_months' | '12_months';
+  amount: number; // Amount in paise
   status: string;
   invoiceUrl?: string;
   createdAt: string;
@@ -74,11 +75,11 @@ export default function PaymentsTab() {
   };
 
   const calculateUserPaymentStats = (paymentsData: Payment[]) => {
-    const totalSpent = paymentsData.reduce((sum, payment) => sum + payment.amount, 0);
+    const totalSpent = paymentsData.reduce((sum, payment) => sum + (payment.amount / 100), 0); // Convert paise to rupees
     const totalPayments = paymentsData.length;
     const avgPayment = totalPayments > 0 ? Math.round(totalSpent / totalPayments) : 0;
 
-    const currentPlan = paymentsData.length > 0 ? paymentsData[0].plan : 'Free';
+    const currentPlan = paymentsData.length > 0 ? paymentsData[0].planName : 'Free';
 
     const nextBilling = paymentsData.length > 0
       ? new Date(new Date(paymentsData[0].createdAt).getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -137,7 +138,7 @@ export default function PaymentsTab() {
               <div className="min-w-0">
                 <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm font-bold">Total Spent</p>
                 <p className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white truncate" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                  ₹{userPaymentStats.totalSpent}
+                  ₹{userPaymentStats.totalSpent.toLocaleString('en-IN', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
@@ -216,8 +217,8 @@ export default function PaymentsTab() {
                   <tbody>
                     {payments.map((payment) => (
                       <tr key={payment._id} className="border-b border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-700 transition">
-                        <td className="px-6 py-4 font-black" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>{payment.plan}</td>
-                        <td className="px-6 py-4 font-bold">₹{payment.amount}</td>
+                        <td className="px-6 py-4 font-black" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>{payment.planName}</td>
+                        <td className="px-6 py-4 font-bold">₹{(payment.amount / 100).toLocaleString()}</td>
                         <td className="px-6 py-4">
                           <span className={`px-2 py-1 rounded-full text-xs font-black ${
                             payment.status === 'completed'
@@ -257,7 +258,7 @@ export default function PaymentsTab() {
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="font-black text-gray-900 dark:text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                          {payment.plan}
+                          {payment.planName}
                         </span>
                         <span className={`px-2 py-1 rounded-full text-xs font-black ${
                           payment.status === 'completed'
@@ -272,7 +273,7 @@ export default function PaymentsTab() {
                       
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-600 dark:text-gray-400 font-bold">Amount:</span>
-                        <span className="font-bold text-gray-900 dark:text-white">₹{payment.amount}</span>
+                        <span className="font-bold text-gray-900 dark:text-white">₹{(payment.amount / 100).toLocaleString()}</span>
                       </div>
                       
                       <div className="flex items-center justify-between text-sm">

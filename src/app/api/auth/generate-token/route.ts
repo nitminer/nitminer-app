@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
+import { getToken } from 'next-auth/jwt';
 import dbConnect from '@/lib/dbConnect';
 import { User } from '@/models/User';
 
@@ -42,49 +43,23 @@ import { User } from '@/models/User';
 
 export async function POST(req: NextRequest) {
   try {
-    // Extract JWT token from cookies
-    const accessToken = req.cookies.get('accessToken')?.value;
+    // Get NextAuth token
+    const token = await getToken({ 
+      req, 
+      secret: process.env.NEXTAUTH_SECRET 
+    });
 
-    if (!accessToken) {
-      console.log('No access token found in generate-token endpoint');
+    if (!token) {
+      console.log('No NextAuth session found in generate-token endpoint');
       return NextResponse.json(
-        { error: 'Unauthorized - No token provided' },
+        { error: 'Unauthorized - no session' }, 
         { status: 401 }
       );
     }
 
-    const secret = process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET;
-    if (!secret) {
-      return NextResponse.json(
-        { error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
-
-    // Verify JWT token using same method as /api/user/me
-    let decoded: any;
-    try {
-      decoded = jwt.verify(accessToken, secret) as any;
-    } catch (error) {
-      console.log('Token verification failed in generate-token:', error);
-      return NextResponse.json(
-        { error: 'Unauthorized - Invalid token' },
-        { status: 401 }
-      );
-    }
-
-    // Check if token is access token
-    if (decoded.type !== 'access') {
-      console.log('Invalid token type in generate-token:', decoded.type);
-      return NextResponse.json(
-        { error: 'Unauthorized - Invalid token type' },
-        { status: 401 }
-      );
-    }
-
-    const userId = decoded.userId;
-    const userEmail = decoded.email;
-    const userRole = decoded.role || 'user';
+    const userId = token.id;
+    const userEmail = token.email;
+    const userRole = token.role || 'user';
 
     console.log('POST /api/auth/generate-token - Session:', {
       hasSession: true,

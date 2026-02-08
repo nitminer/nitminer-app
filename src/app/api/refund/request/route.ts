@@ -1,42 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { jwtVerify } from 'jose';
+import { getToken } from 'next-auth/jwt';
 import dbConnect from '@/lib/dbConnect';
 import { RefundRequest } from '@/models/RefundRequest';
 import { Payment } from '@/models/Payment';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'your-secret-key'
-);
-
 export async function POST(request: NextRequest) {
   try {
-    // Extract JWT token from cookies
-    const token = request.cookies.get('accessToken')?.value;
+    // Get token from NextAuth
+    const token = await getToken({ req: request });
 
-    if (!token) {
+    if (!token || !token.email) {
       return NextResponse.json(
-        { error: 'Unauthorized - No token provided' },
-        { status: 401 }
-      );
-    }
-
-    // Verify JWT token
-    let decoded: any;
-    try {
-      const secret = JWT_SECRET;
-      const verified = await jwtVerify(token, secret);
-      decoded = verified.payload;
-    } catch (error) {
-      return NextResponse.json(
-        { error: 'Unauthorized - Invalid token' },
-        { status: 401 }
-      );
-    }
-
-    // Check if token is access token
-    if (decoded.type !== 'access') {
-      return NextResponse.json(
-        { error: 'Unauthorized - Invalid token type' },
+        { error: 'Unauthorized - No valid session' },
         { status: 401 }
       );
     }
@@ -44,9 +19,22 @@ export async function POST(request: NextRequest) {
     // Connect to database
     await dbConnect();
 
-    const userId = decoded.userId;
+    const userEmail = token.email;
     const body = await request.json();
     const { paymentId, reason } = body;
+
+    // Get userId from email
+    const { User } = await import('@/models/User');
+    const user = await User.findOne({ email: userEmail });
+    
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const userId = user._id;
 
     // Validate input
     if (!paymentId || !reason) {
@@ -66,7 +54,7 @@ export async function POST(request: NextRequest) {
     // Verify payment belongs to user and is successful
     const payment = await Payment.findOne({
       _id: paymentId,
-      userId: userId,
+      userEmail: userEmail,
     });
 
     if (!payment) {
@@ -99,11 +87,21 @@ export async function POST(request: NextRequest) {
     // Create refund request
     const refundRequest = new RefundRequest({
       userId,
+      userEmail,
       paymentId,
+      amount: payment.amount,
       reason,
     });
 
     await refundRequest.save();
+
+    console.log('✅ Refund request created:', {
+      _id: refundRequest._id,
+      userEmail: refundRequest.userEmail,
+      paymentId: refundRequest.paymentId,
+      amount: refundRequest.amount,
+      status: refundRequest.status,
+    });
 
     return NextResponse.json(
       {

@@ -47,14 +47,17 @@ export default function AnalyticsDashboard() {
   });
 
   const formatNumber = (num: number): string => {
-    if (num >= 10000000) {
-      return `₹${(num / 10000000).toFixed(1)}Cr`;
-    } else if (num >= 100000) {
-      return `₹${(num / 100000).toFixed(1)}L`;
-    } else if (num >= 1000) {
-      return `₹${(num / 1000).toFixed(1)}K`;
+    // Convert from paise to rupees
+    const rupees = num / 100;
+    
+    if (rupees >= 10000000) {
+      return `₹${(rupees / 10000000).toFixed(1)}Cr`;
+    } else if (rupees >= 100000) {
+      return `₹${(rupees / 100000).toFixed(1)}L`;
+    } else if (rupees >= 1000) {
+      return `₹${(rupees / 1000).toFixed(1)}K`;
     }
-    return `₹${num}`;
+    return `₹${rupees.toFixed(2)}`;
   };
 
   useEffect(() => {
@@ -72,13 +75,15 @@ export default function AnalyticsDashboard() {
       const analyticsData = await analyticsRes.json();
       const paymentsData = await paymentsRes.json();
 
-      const successfulPayments = paymentsData.payments?.filter((p: Payment) => p.status === 'success') || [];
+      console.log('📊 Analytics API Response:', { analyticsData, paymentsData });
+
+      const successfulPayments = paymentsData.data || [];
       const processedData = processAnalyticsData(analyticsData, successfulPayments);
       setAnalytics(processedData);
 
       const totalRevenue = successfulPayments.reduce((sum: number, p: Payment) => sum + p.amount, 0);
       const totalPayments = successfulPayments.length;
-      const avgPayment = totalPayments > 0 ? Math.round((totalRevenue / totalPayments) * 100) / 100 : 0;
+      const avgPayment = totalPayments > 0 ? (totalRevenue / 100) / totalPayments : 0;
 
       const usersRes = await fetch('/api/admin/users?limit=1');
       const usersData = await usersRes.json();
@@ -90,7 +95,7 @@ export default function AnalyticsDashboard() {
       const revenueByDayMap = new Map();
       successfulPayments.forEach(payment => {
         const paymentDate = new Date(payment.createdAt);
-        if (paymentDate >= sevenDaysAgo && payment.status === 'success') {
+        if (paymentDate >= sevenDaysAgo) {
           const dayKey = paymentDate.toISOString().split('T')[0];
           revenueByDayMap.set(dayKey, (revenueByDayMap.get(dayKey) || 0) + payment.amount);
         }
@@ -101,12 +106,14 @@ export default function AnalyticsDashboard() {
         const date = new Date();
         date.setDate(date.getDate() - i);
         const dayKey = date.toISOString().split('T')[0];
-        const amount = revenueByDayMap.get(dayKey) || 0;
+        const amount = (revenueByDayMap.get(dayKey) || 0) / 100; // Convert paise to rupees
         revenueByDay.push({
           date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           amount
         });
       }
+
+      console.log('✅ Stats calculated:', { totalRevenue, totalPayments, avgPayment, activeUsers });
 
       setStats({
         totalRevenue,
@@ -274,7 +281,7 @@ export default function AnalyticsDashboard() {
             <div className="ml-3 sm:ml-4 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">ARPU</p>
               <p className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white font-heading truncate">
-                ₹{(stats.activeUsers > 0 ? stats.totalRevenue / stats.activeUsers : 0).toFixed(2)}
+                ₹{(stats.activeUsers > 0 ? (stats.totalRevenue / 100) / stats.activeUsers : 0).toFixed(2)}
               </p>
               <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1">Revenue per user</p>
             </div>

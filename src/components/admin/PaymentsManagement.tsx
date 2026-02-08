@@ -5,15 +5,14 @@ import { FiCreditCard, FiSearch, FiEye, FiDownload, FiFilter } from 'react-icons
 
 interface Payment {
   _id: string;
-  userId: {
-    name: string;
-    email: string;
-  };
+  userEmail: string;
+  customerName?: string;
+  planName: string;
+  planDuration?: string;
   amount: number;
   status: string;
-  plan: string;
   paymentMethod: string;
-  paymentId: string;
+  paymentId?: string;
   createdAt: string;
 }
 
@@ -46,11 +45,15 @@ export default function PaymentsManagement() {
 
       const response = await fetch(`/api/admin/payments?${params}`);
       const data = await response.json();
-      setPayments(data.payments);
-      setTotalPages(data.pagination.totalPages);
-      setTotalPayments(data.pagination.totalPayments);
-      setTotalRevenue(data.totalRevenue);
-      setSuccessfulPaymentsCount(data.successfulPaymentsCount);
+      setPayments(data.data || []);
+      setTotalPages(data.pagination.pages);
+      setTotalPayments(data.pagination.total);
+      
+      // Calculate totalRevenue from successful payments
+      const successfulPayments = (data.data || []).filter((p: Payment) => p.status === 'success');
+      const revenue = successfulPayments.reduce((sum: number, p: Payment) => sum + (p.amount || 0), 0);
+      setTotalRevenue(revenue);
+      setSuccessfulPaymentsCount(successfulPayments.length);
     } catch (error) {
       console.error('Error fetching payments:', error);
     } finally {
@@ -73,23 +76,28 @@ export default function PaymentsManagement() {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return `₹${amount.toLocaleString('en-IN')}`;
+  const formatCurrency = (amount: number | undefined) => {
+    if (amount === null || amount === undefined) {
+      return '₹0.00';
+    }
+    // Convert from paise to rupees
+    const rupees = amount / 100;
+    return `₹${rupees.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const exportPayments = () => {
-    const headers = ['Date', 'User', 'Email', 'Amount (₹)', 'Plan', 'Status', 'Payment Method', 'Transaction ID'];
+    const headers = ['Date', 'Customer', 'Email', 'Amount (₹)', 'Plan', 'Status', 'Payment Method', 'Transaction ID'];
     const csvContent = [
       headers.join(','),
       ...payments.map(payment => [
         new Date(payment.createdAt).toLocaleDateString(),
-        `"${payment.userId.name}"`,
-        payment.userId.email,
-        payment.amount,
-        payment.plan,
+        `"${payment.customerName || 'N/A'}"`,
+        payment.userEmail,
+        (payment.amount / 100).toFixed(2),
+        payment.planName,
         payment.status,
-        payment.paymentMethod,
-        payment.paymentId,
+        payment.paymentMethod || 'razorpay',
+        payment.paymentId || 'N/A',
       ].join(','))
     ].join('\n');
 
@@ -217,8 +225,8 @@ export default function PaymentsManagement() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">{payment.userId.name}</div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">{payment.userId.email}</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">{payment.customerName || 'N/A'}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">{payment.userEmail}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -227,7 +235,7 @@ export default function PaymentsManagement() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                      {payment.plan}
+                      {payment.planName}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -236,7 +244,7 @@ export default function PaymentsManagement() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {payment.paymentMethod}
+                    {payment.paymentMethod || 'razorpay'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">
                     {payment.status === 'success' ? payment.paymentId : '-'}

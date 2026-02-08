@@ -1,5 +1,4 @@
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getToken } from 'next-auth/jwt';
 import dbConnect from '@/lib/dbConnect';
 import { User } from '@/models/User';
 import { Payment } from '@/models/Payment';
@@ -7,9 +6,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const token = await getToken({ req });
 
-    if (!session?.user?.id || session.user.role !== 'admin') {
+    if (!token || token.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -17,39 +16,54 @@ export async function GET(req: NextRequest) {
 
     // Get user stats
     const totalUsers = await User.countDocuments();
-    const activeUsers = await User.countDocuments({ isActive: true });
+    const premiumUsers = await User.countDocuments({ isPremium: true });
+    const freeTrialUsers = totalUsers - premiumUsers;
 
-    // Get payment stats
-    const totalPayments = await Payment.countDocuments();
-    const completedPayments = await Payment.find({ status: 'completed' });
+    // Get payment stats - use 'success' status instead of 'completed'
+    const successfulPayments = await Payment.find({ status: 'success' }).lean();
 
-    const totalRevenue = completedPayments.reduce((sum, payment) => sum + payment.amount, 0);
+    const totalRevenue = successfulPayments.reduce((sum, payment) => sum + payment.amount, 0);
 
-    // Get recent activity (last 7 days)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    // Get monthly revenue (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const recentUsers = await User.countDocuments({ createdAt: { $gte: sevenDaysAgo } });
-    const recentPayments = await Payment.countDocuments({
-      createdAt: { $gte: sevenDaysAgo },
-      status: 'completed'
-    });
+    const monthlyPayments = await Payment.find({
+      status: 'success',
+      createdAt: { $gte: thirtyDaysAgo }
+    }).lean();
 
-    // Get subscription distribution
-    const subscriptionStats = await User.aggregate([
-      { $group: { _id: '$subscription', count: { $sum: 1 } } }
+    const monthlyRevenue = monthlyPayments.reduce((sum, payment) => sum + payment.amount, 0);
+
+    // Revenue by plan
+    const revenueByPlan = await Payment.aggregate([
+      { $match: { status: 'success' } },
+      {
+        $group: {
+          _id: '$planName',
+          total: { $sum: '$amount' },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { total: -1 } }
     ]);
+
+    console.log('✅ Admin overview fetched:', {
+      totalUsers,
+      premiumUsers,
+      freeTrialUsers,
+      totalRevenue,
+      monthlyRevenue,
+      revenueByPlan: revenueByPlan.length
+    });
 
     return NextResponse.json({
       totalUsers,
-      activeUsers,
-      totalPayments,
+      premiumUsers,
+      freeTrialUsers,
       totalRevenue,
-      recentActivity: {
-        newUsers: recentUsers,
-        newPayments: recentPayments,
-      },
-      subscriptionStats
+      monthlyRevenue,
+      revenueByPlan
     });
   } catch (error) {
     console.error('Admin overview error:', error);

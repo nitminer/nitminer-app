@@ -2,7 +2,9 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IRefundRequest extends Document {
   userId: mongoose.Types.ObjectId;
+  userEmail: string;
   paymentId: mongoose.Types.ObjectId;
+  amount: number; // Amount in paise
   reason: string;
   status: 'pending' | 'approved' | 'rejected' | 'completed';
   adminNotes?: string;
@@ -20,9 +22,19 @@ const refundRequestSchema = new Schema<IRefundRequest>(
       ref: 'User',
       required: true,
     },
+    userEmail: {
+      type: String,
+      required: true,
+      lowercase: true,
+      index: true,
+    },
     paymentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Payment',
+      required: true,
+    },
+    amount: {
+      type: Number,
       required: true,
     },
     reason: {
@@ -63,10 +75,12 @@ const refundRequestSchema = new Schema<IRefundRequest>(
 
 // Indexes for faster queries
 refundRequestSchema.index({ userId: 1 });
+refundRequestSchema.index({ userEmail: 1 });
 refundRequestSchema.index({ paymentId: 1 });
 refundRequestSchema.index({ status: 1 });
 refundRequestSchema.index({ createdAt: -1 });
 refundRequestSchema.index({ userId: 1, status: 1 });
+refundRequestSchema.index({ userEmail: 1, status: 1 });
 
 export const RefundRequest =
   mongoose.models.RefundRequest ||

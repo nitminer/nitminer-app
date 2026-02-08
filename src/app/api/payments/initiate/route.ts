@@ -1,7 +1,5 @@
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getToken } from 'next-auth/jwt';
 import dbConnect from '@/lib/dbConnect';
-import { User } from '@/models/User';
 import { Payment } from '@/models/Payment';
 import Razorpay from 'razorpay';
 import { NextRequest, NextResponse } from 'next/server';
@@ -13,68 +11,72 @@ const razorpay = new Razorpay({
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const token = await getToken({ req });
 
-    console.log('Payment initiate - Session:', session?.user?.email, 'ID:', session?.user?.id);
+    console.log('Payment initiate - Session:', token?.email);
 
-    if (!session?.user?.email) {
+    if (!token?.email) {
       console.log('Payment initiate - No session found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { email, plan, amount, duration, durationUnit, planDisplayName } = await req.json();
+    const { plan, amount, duration, customerName } = await req.json();
 
-    console.log('Payment initiate - Request data:', { email, plan, amount, duration, durationUnit, planDisplayName });
+    console.log('Payment initiate - Request data:', { email: token.email, plan, amount, duration, customerName });
 
-    if (!email || !plan || !amount || !duration || !durationUnit) {
+    if (!plan || !amount) {
       console.log('Payment initiate - Missing required fields');
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     await dbConnect();
 
-    // Find user by email to get user ID
-    const user = await User.findOne({ email: session.user.email });
-    if (!user) {
-      console.log('Payment initiate - User not found:', session.user.email);
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+    // Map duration to plan duration enum
+    const durationMap: { [key: string]: '1_month' | '6_months' | '12_months' } = {
+      '1': '1_month',
+      '6': '6_months',
+      '12': '12_months',
+    };
+    const planDuration = durationMap[String(duration || '12')] || '12_months';
 
     // Create Razorpay order
     const options = {
-      amount: amount, // amount in paise
+      amount: amount, // Amount is already in paise from frontend (no need to multiply again)
       currency: 'INR',
       receipt: `rcpt_${Date.now()}`,
       notes: {
-        email,
+        email: token.email,
         plan,
-        planDisplayName,
-        duration: `${duration} ${durationUnit}`,
+        duration,
       },
     };
 
     const order = await razorpay.orders.create(options);
 
     // Store initial payment record
-    const paymentPlan = duration === 1 ? '1_month' : duration === 6 ? '6_months' : '12_months';
     const payment = await Payment.create({
-      userId: user._id.toString(),
-      plan: paymentPlan,
-      amount: amount / 100, // Convert from paise to rupees
-      paymentMethod: 'razorpay',
-      paymentId: order.id,
+      userEmail: token.email,
+      customerName: customerName || token.name || token.email,
+      planName: plan,
+      planDuration,
       orderId: order.id,
+      amount,
+      paymentMethod: 'razorpay',
       status: 'pending',
     });
 
+    console.log('✅ Payment order created:', order.id);
+
     return NextResponse.json({
+      success: true,
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
-      key: process.env.RAZORPAY_KEY_ID,
+      keyId: process.env.RAZORPAY_KEY_ID,
     });
   } catch (error) {
-    console.error('Payment initiation error:', error);
-    return NextResponse.json({ error: 'Failed to initiate payment' }, { status: 500 });
+    console.error('❌ Payment initiate error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to initiate payment';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

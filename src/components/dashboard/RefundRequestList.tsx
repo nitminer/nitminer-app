@@ -5,8 +5,10 @@ import { AlertCircle, Clock, CheckCircle, XCircle } from 'lucide-react';
 
 interface RefundRequest {
   _id: string;
+  userEmail: string;
+  amount: number; // Amount in paise
   paymentId: {
-    plan: string;
+    planName: string;
     amount: number;
   };
   reason: string;
@@ -93,13 +95,15 @@ export default function RefundRequestList() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Refund requests fetched:', data);
         setRefundRequests(data.refundRequests || []);
         setPagination(data.pagination || null);
       } else if (response.status === 401) {
         console.warn('Unauthorized - token may have expired. Please refresh the page.');
         setRefundRequests([]);
       } else {
-        console.error('Failed to fetch refund requests:', response.status);
+        const errorData = await response.json();
+        console.error('Failed to fetch refund requests:', response.status, errorData);
         setRefundRequests([]);
       }
     } catch (error) {
@@ -192,7 +196,7 @@ export default function RefundRequestList() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <h4 className="text-base sm:text-lg font-black text-gray-900 dark:text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                              {request.paymentId?.plan || 'Payment'} Refund
+                              {request.paymentId?.planName || 'Payment'} Refund
                             </h4>
                             <p className={`text-sm font-bold ${config.text}`}>
                               {config.label}
@@ -207,7 +211,7 @@ export default function RefundRequestList() {
                               Amount
                             </p>
                             <p className="text-base sm:text-lg font-black text-gray-900 dark:text-white">
-                              ₹{request.paymentId?.amount || 'N/A'}
+                              ₹{request.paymentId?.amount ? (request.paymentId.amount / 100).toLocaleString() : 'N/A'}
                             </p>
                           </div>
                           <div>

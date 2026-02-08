@@ -193,3 +193,26 @@ export async function sendPaymentSuccessEmail(
     throw error;
   }
 }
+
+export async function sendEmail({
+  to,
+  subject,
+  html,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+}) {
+  try {
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM,
+      to,
+      subject,
+      html,
+    });
+    console.log(`Email sent to ${to}`);
+  } catch (error) {
+    console.error('Failed to send email:', error);
+    throw error;
+  }
+}
