@@ -10,3 +10,6 @@ node_modules/
 .env.production
 .env.development
 .env.*.local
+.env
+.env.local
+.env.production
