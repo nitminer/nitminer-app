@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import { RefundChat } from '@/models/RefundChat';
 import { RefundRequest } from '@/models/RefundRequest';
@@ -13,12 +14,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
+    const session = await getServerSession(authOptions);
 
-    if (!token) {
+    if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -38,7 +36,7 @@ export async function GET(
       );
     }
 
-    if (token.role !== 'admin' && refundRequest.userId.toString() !== token.id) {
+    if (session.user?.role !== 'admin' && refundRequest.userId.toString() !== session.user?.id) {
       return NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }
@@ -74,14 +72,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
+    const session = await getServerSession(authOptions);
 
     const { id } = await params;
 
-    if (!token) {
+    if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -108,7 +103,7 @@ export async function POST(
       );
     }
 
-    if (token.role !== 'admin' && refundRequest.userId.toString() !== token.id) {
+    if (session.user?.role !== 'admin' && refundRequest.userId.toString() !== session.user?.id) {
       return NextResponse.json(
         { error: 'Access denied' },
         { status: 403 }
@@ -118,10 +113,10 @@ export async function POST(
     // Create and save message
     const refundMessage = new RefundChat({
       refundRequestId: id,
-      senderId: token.id,
-      senderEmail: token.email,
-      senderName: token.name || 'User',
-      senderRole: token.role || 'user',
+      senderId: session.user?.id,
+      senderEmail: session.user?.email,
+      senderName: session.user?.name || 'User',
+      senderRole: session.user?.role || 'user',
       message: message.trim(),
       read: false,
     });

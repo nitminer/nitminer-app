@@ -38,9 +38,10 @@ interface Conversation {
 
 interface InboxProps {
   role?: 'user' | 'admin';
+  refreshTrigger?: number;
 }
 
-export default function Inbox({ role = 'user' }: InboxProps) {
+export default function Inbox({ role = 'user', refreshTrigger = 0 }: InboxProps) {
   const { data: session } = useSession();
   const { socket, isConnected, emit, on } = useSocket(session?.user?.email);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -91,7 +92,7 @@ export default function Inbox({ role = 'user' }: InboxProps) {
         socket.emit('join', session.user.email);
       }
     }
-  }, [session?.user?.email, isConnected, socket]);
+  }, [session?.user?.email, isConnected, socket, refreshTrigger]);
 
   // Fetch messages for selected conversation
   useEffect(() => {

@@ -1,4 +1,5 @@
-import { getToken } from 'next-auth/jwt';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import { Conversation } from '@/models/Conversation';
@@ -7,9 +8,9 @@ import { sendEmail } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   try {
-    const token = await getToken({ req: request });
+    const session = await getServerSession(authOptions);
 
-    if (!token || !token.email) {
+    if (!session?.user?.email) {
       return NextResponse.json(
         { error: 'Unauthorized - No valid session' },
         { status: 401 }
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user details
-    const user = await User.findOne({ email: token.email });
+    const user = await User.findOne({ email: session.user.email });
     if (!user) {
       return NextResponse.json(
         { error: 'User not found' },
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
     // Create conversation
     const conversation = new Conversation({
       userId: user._id,
-      userEmail: token.email,
+      userEmail: session.user.email,
       subject,
       status: 'open',
       lastMessage: message,
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
     const messageDoc = new ConversationMessage({
       conversationId: conversation._id,
       senderId: user._id,
-      senderEmail: token.email,
+      senderEmail: session.user.email,
       senderName: user.firstName || user.email,
       senderRole: 'user',
       message,
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     console.log('New conversation created:', {
       id: conversation._id,
-      userEmail: token.email,
+      userEmail: session.user.email,
       subject,
     });
 
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
       const emailContent = `
         <h2>New Message from ${userName}</h2>
         <p><strong>From:</strong> ${user.firstName} ${user.lastName || ''}</p>
-        <p><strong>Email:</strong> ${token.email}</p>
+        <p><strong>Email:</strong> ${session.user.email}</p>
         <p><strong>Subject:</strong> ${subject}</p>
         <p><strong>Message:</strong></p>
         <p>${message.replace(/\n/g, '<br>')}</p>

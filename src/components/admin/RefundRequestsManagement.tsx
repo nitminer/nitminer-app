@@ -2,16 +2,17 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
-import { FiSearch, FiFilter, FiClock, FiCheckCircle, FiXCircle, FiX } from 'react-icons/fi';
+import { FiSearch, FiFilter, FiClock, FiCheckCircle, FiXCircle, FiX ,FiRotateCw,FiMail} from 'react-icons/fi';
 import { toast } from '@/lib/toast';
 import { useSocket } from '@/hooks/useSocket';
+import RefundModal from './RefundModal';
 
 interface RefundRequest {
   _id: string;
   userEmail: string;
   paymentId: string;
   reason: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'completed';
   amount: number;
   adminNotes?: string;
   createdAt: string;
@@ -32,7 +33,7 @@ interface RefundChat {
 
 
 
-export default function RefundRequestsManagement() {
+export default function RefundRequestsManagement({ refreshTrigger = 0 }: { refreshTrigger?: number }) {
   const { data: session } = useSession();
   const { socket, isConnected } = useSocket(session?.user?.email);
   const [requests, setRequests] = useState<RefundRequest[]>([]);
@@ -47,6 +48,8 @@ export default function RefundRequestsManagement() {
   const [processingRequest, setProcessingRequest] = useState(false);
   const [loadingRequests, setLoadingRequests] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [selectedForRefund, setSelectedForRefund] = useState<RefundRequest | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch refund requests
@@ -81,7 +84,7 @@ export default function RefundRequestsManagement() {
         socket.emit('join', session.user.email);
       }
     }
-  }, [session?.user?.email, isConnected, socket]);
+  }, [session?.user?.email, isConnected, socket, refreshTrigger]);
 
   // Fetch messages for selected request
   useEffect(() => {
@@ -223,6 +226,53 @@ export default function RefundRequestsManagement() {
     }
   };
 
+  const handleProcessRefund = async (refundRequestId: string, percentage: number, notes: string) => {
+    setProcessingRequest(true);
+    try {
+      const response = await fetch('/api/admin/refunds/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          refundRequestId,
+          refundPercentage: percentage,
+          adminNotes: notes,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to process refund');
+      }
+
+      const data = await response.json();
+      
+      // Close modal
+      setShowRefundModal(false);
+      setSelectedForRefund(null);
+
+      // Update refund request in list
+      setRequests(
+        requests.map((req) =>
+          req._id === refundRequestId
+            ? { ...req, status: 'completed' }
+            : req
+        )
+      );
+
+      if (selectedRequest?._id === refundRequestId) {
+        setSelectedRequest({ ...selectedRequest, status: 'completed' });
+      }
+
+      toast.success('Refund processed successfully!');
+    } catch (error) {
+      console.error('Refund processing error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to process refund');
+    } finally {
+      setProcessingRequest(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
@@ -343,156 +393,168 @@ export default function RefundRequestsManagement() {
         </div>
 
         {/* Chat and Details Panel */}
-        <div className="lg:col-span-2">
-          {selectedRequest ? (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm h-full flex flex-col">
-              {/* Header */}
-              {/* Header */}
-              <div className="border-b border-gray-200 dark:border-gray-700 p-4 flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white">
-                    {selectedRequest.userEmail}
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    ₹{(selectedRequest.amount / 100).toLocaleString()}
-                  </p>
-                  <div className="mt-2 flex items-center gap-2">
-                    <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${getStatusColor(selectedRequest.status)}`}>
-                      {getStatusIcon(selectedRequest.status)}
-                      {selectedRequest.status}
-                    </div>
-                  </div>
+        {/* Chat and Details Panel */}
+<div className="lg:col-span-2">
+  {selectedRequest ? (
+    /* Main Panel Wrapper: Fixed height and locked width */
+    <div className="bg-white dark:bg-gray-800 rounded-3xl border border-black/5 dark:border-white/5 h-[700px] flex flex-col overflow-hidden shadow-sm">
+      
+      {/* 1. FIXED HEADER: shrink-0 prevents it from disappearing on scroll */}
+      <div className="shrink-0 border-b border-gray-100 dark:border-white/5 p-5 flex items-start justify-between bg-white dark:bg-gray-800">
+        <div>
+          <h3 className="font-black text-lg text-gray-900 dark:text-white uppercase tracking-tighter">
+            {selectedRequest.userEmail}
+          </h3>
+          <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+            ₹{(selectedRequest.amount / 100).toLocaleString()}
+          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${getStatusColor(selectedRequest.status)}`}>
+              {getStatusIcon(selectedRequest.status)}
+              {selectedRequest.status}
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={() => setSelectedRequest(null)}
+          className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-colors text-gray-400"
+        >
+          <FiX size={20} />
+        </button>
+      </div>
+
+      {/* 2. FIXED REASON SUMMARY */}
+      <div className="shrink-0 bg-gray-50/50 dark:bg-black/20 p-4 border-b border-gray-100 dark:border-white/5">
+        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Issue Description</p>
+        <p className="text-sm text-gray-600 dark:text-gray-300 italic">"{selectedRequest.reason}"</p>
+      </div>
+
+      {/* 3. SCROLLABLE CHAT AREA: flex-1 takes all remaining space */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50/30 dark:bg-[#050506]/30 no-scrollbar">
+        {loadingMessages ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : messages.length > 0 ? (
+          messages.map((msg) => (
+            <div
+              key={msg._id}
+              className={`flex ${
+                msg.senderEmail === session?.user?.email ? 'justify-end' : 'justify-start'
+              }`}
+            >
+              <div
+                className={`max-w-[80%] px-4 py-3 rounded-2xl shadow-sm ${
+                  msg.senderEmail === session?.user?.email
+                    ? 'bg-indigo-600 text-white rounded-br-none'
+                    : 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white rounded-bl-none border border-black/5 dark:border-white/5'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-black uppercase opacity-70 tracking-widest">
+                    {msg.senderName}
+                  </span>
+                  {msg.senderRole === 'admin' && (
+                    <span className="text-[8px] bg-black/20 px-1.5 py-0.5 rounded-full font-black uppercase">
+                      Admin
+                    </span>
+                  )}
                 </div>
-                <button
-                  onClick={() => setSelectedRequest(null)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <FiX size={20} />
-                </button>
-              </div>
-
-              {/* Reason */}
-              <div className="border-b border-gray-200 dark:border-gray-700 p-4 space-y-2">
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Refund Reason:</p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{selectedRequest.reason}</p>
-              </div>
-
-              {/* Chat Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-900/50">
-                {loadingMessages ? (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    Loading messages...
-                  </div>
-                ) : messages.length > 0 ? (
-                  messages.map((msg) => (
-                    <div
-                      key={msg._id}
-                      className={`flex ${
-                        msg.senderEmail === session?.user?.email ? 'justify-end' : 'justify-start'
-                      }`}
-                    >
-                      <div
-                        className={`max-w-xs px-4 py-2 rounded-lg ${
-                          msg.senderEmail === session?.user?.email
-                            ? 'bg-blue-600 text-white rounded-br-none'
-                            : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-none'
-                        }`}
-                      >
-                        <p className="text-xs font-medium mb-1 opacity-75">
-                          {msg.senderName}
-                          {msg.senderRole && (
-                            <span className="ml-2 text-xs bg-black/20 px-1 rounded">
-                              {msg.senderRole}
-                            </span>
-                          )}
-                        </p>
-                        <p className="text-sm">{msg.message}</p>
-                        <p className="text-xs opacity-50 mt-1">
-                          {new Date(msg.createdAt).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    No messages yet. Start the conversation!
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Message Input */}
-              <div className="border-t border-gray-200 dark:border-gray-700 p-4 space-y-4">
-                {/* Admin Notes */}
-                {selectedRequest.status !== 'rejected' && (
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Admin Notes:
-                    </label>
-                    <textarea
-                      value={adminNotes}
-                      onChange={(e) => setAdminNotes(e.target.value)}
-                      disabled={processingRequest}
-                      placeholder="Add internal notes..."
-                      rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-                )}
-
-                {/* Message Input */}
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                    disabled={sendingMessage}
-                    placeholder="Write a message..."
-                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={sendingMessage || !newMessage.trim()}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
-                  >
-                    Send
-                  </button>
-                </div>
-
-                {/* Status Buttons */}
-                {selectedRequest.status === 'pending' && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleUpdateStatus('approved')}
-                      disabled={processingRequest}
-                      className="flex-1 py-2 px-4 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
-                    >
-                      {processingRequest ? 'Processing...' : 'Approve'}
-                    </button>
-                    <button
-                      onClick={() => handleUpdateStatus('rejected')}
-                      disabled={processingRequest}
-                      className="flex-1 py-2 px-4 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors"
-                    >
-                      {processingRequest ? 'Processing...' : 'Reject'}
-                    </button>
-                  </div>
-                )}
+                <p className="text-[13px] leading-relaxed font-medium">{msg.message}</p>
+                <p className={`text-[9px] mt-2 opacity-50 font-bold ${msg.senderEmail === session?.user?.email ? 'text-right' : 'text-left'}`}>
+                  {new Date(msg.createdAt).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </p>
               </div>
             </div>
-          ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm flex items-center justify-center h-full">
-              <p className="text-center text-gray-500 dark:text-gray-400">
-                Select a refund request to view details and chat
-              </p>
-            </div>
-          )}
+          ))
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-center opacity-30">
+            <FiMail size={40} className="mb-2" />
+            <p className="text-xs font-black uppercase tracking-widest">Secure Channel Initialized</p>
+          </div>
+        )}
+        {/* Automatic scroll anchor */}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* 4. FIXED INPUT AREA: Always at bottom */}
+      <div className="shrink-0 p-5 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-white/5 space-y-4">
+        {selectedRequest.status === 'pending' && (
+           <div className="flex gap-2">
+             <button
+               onClick={() => { setSelectedForRefund(selectedRequest); setShowRefundModal(true); }}
+               className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all"
+             >
+               Approve Refund
+             </button>
+             <button
+               onClick={() => handleUpdateStatus('rejected')}
+               className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all"
+             >
+               Reject Request
+             </button>
+           </div>
+        )}
+
+        <div className="flex gap-2 bg-gray-50 dark:bg-white/5 p-1 rounded-2xl border border-black/5 dark:border-white/5 focus-within:ring-2 focus-within:ring-indigo-500/50 transition-all">
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+            className="flex-1 bg-transparent px-4 py-2 text-sm font-medium outline-none text-gray-900 dark:text-white"
+            placeholder="Type your official response..."
+          />
+          <button
+            onClick={handleSendMessage}
+            disabled={sendingMessage || !newMessage.trim()}
+            className="bg-[#1A1A1A] dark:bg-white text-white dark:text-black px-6 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest hover:scale-95 transition-all disabled:opacity-50"
+          >
+            {sendingMessage ? '...' : 'Send'}
+          </button>
         </div>
       </div>
+    </div>
+  ) : (
+    <div className="bg-white dark:bg-gray-800 rounded-[32px] border border-dashed border-gray-200 dark:border-white/10 flex flex-col items-center justify-center h-[700px] text-center p-10">
+      <div className="w-16 h-16 bg-gray-50 dark:bg-white/5 rounded-full flex items-center justify-center text-gray-400 mb-4">
+        <FiRotateCw size={30} />
+      </div>
+      <p className="text-xs font-black uppercase tracking-[0.3em] text-gray-400">
+        Select Request to view audit trail
+      </p>
+    </div>
+  )}
+</div>
+      </div>
+
+      {/* Refund Modal */}
+      <RefundModal
+        isOpen={showRefundModal}
+        refundRequest={
+          selectedForRefund
+            ? {
+                _id: selectedForRefund._id,
+                userEmail: selectedForRefund.userEmail,
+                amount: selectedForRefund.amount, // Already in paise from Payment
+                reason: selectedForRefund.reason,
+                userId: {
+                  name: 'User',
+                  email: selectedForRefund.userEmail,
+                },
+              }
+            : null
+        }
+        onClose={() => {
+          setShowRefundModal(false);
+          setSelectedForRefund(null);
+        }}
+        onProcessRefund={handleProcessRefund}
+        isProcessing={processingRequest}
+      />
     </div>
   );
 }

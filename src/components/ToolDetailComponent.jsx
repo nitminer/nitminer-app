@@ -12,14 +12,14 @@ export function ToolDetailComponent({ tool }) {
   }
 
   return (
-    <section className="w-full py-8 md:py-16 bg-white dark:bg-black">
+    <section className="w-full py-8 md:py-16 bg-white">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8 animate-fadeIn">
-          <h1 className="text-4xl md:text-5xl font-bold text-black dark:text-white mb-4">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-black mb-4">
             {tool.title}
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
+          <p className="text-lg text-gray-600 leading-relaxed">
             {tool.description}
           </p>
         </div>
@@ -37,11 +37,11 @@ export function ToolDetailComponent({ tool }) {
 
         {/* Detailed Description */}
         {tool.detailedDescription && (
-          <div className="mb-12 animate-fadeIn p-6 bg-blue-50 dark:bg-gray-900 border border-blue-200 dark:border-gray-800 rounded-lg">
-            <h2 className="text-2xl font-bold text-black dark:text-white mb-4">
+          <div className="mb-12 animate-fadeIn p-6 bg-blue-50 border border-blue-200 rounded-lg">
+            <h2 className="text-2xl font-bold text-black mb-4">
               About {tool.name}
             </h2>
-            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+            <p className="text-gray-700 leading-relaxed">
               {tool.detailedDescription}
             </p>
           </div>
@@ -89,7 +89,7 @@ export function ToolDetailComponent({ tool }) {
             {tool.features.map((feature, index) => (
               <div
                 key={index}
-                className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
+                className="flex items-start gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:border-blue-400 transition-colors"
               >
                 <FiCheck className="text-green-500 flex-shrink-0 mt-1" size={20} />
                 <span className="text-gray-700 dark:text-gray-300">{feature}</span>

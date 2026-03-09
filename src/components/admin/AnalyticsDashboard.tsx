@@ -11,7 +11,11 @@ import {
   Tooltip,
   ResponsiveContainer,
   AreaChart,
-  Area
+  Area,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
 } from 'recharts';
 
 interface Payment {
@@ -21,6 +25,7 @@ interface Payment {
   status: string;
   userId: string;
   createdAt: string;
+  paymentMode?: string;
 }
 
 interface AnalyticsData {
@@ -30,13 +35,21 @@ interface AnalyticsData {
   userGrowth: any[];
 }
 
-export default function AnalyticsDashboard() {
+interface PaymentModeData {
+  mode: string;
+  count: number;
+}
+
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
+
+export default function AnalyticsDashboard({ refreshTrigger = 0 }: { refreshTrigger?: number }) {
   const [analytics, setAnalytics] = useState<AnalyticsData>({
     paymentTrends: [],
     dailyEarnings: [],
     monthlyRevenue: [],
     userGrowth: []
   });
+  const [paymentModeData, setPaymentModeData] = useState<PaymentModeData[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalRevenue: 0,
@@ -62,7 +75,7 @@ export default function AnalyticsDashboard() {
 
   useEffect(() => {
     fetchAnalytics();
-  }, []);
+  }, [refreshTrigger]);
 
   const fetchAnalytics = async () => {
     try {
@@ -112,6 +125,25 @@ export default function AnalyticsDashboard() {
           amount
         });
       }
+
+      // Calculate payment mode distribution
+      const modeCount: { [key: string]: number } = {};
+      successfulPayments.forEach((p: Payment) => {
+        const mode = p.paymentMode && p.paymentMode.trim() ? p.paymentMode : 'Not Specified';
+        modeCount[mode] = (modeCount[mode] || 0) + 1;
+      });
+
+      const chartData = Object.entries(modeCount)
+        .map(([mode, count]) => ({
+          mode: mode
+            .split('_')
+            .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' '),
+          count,
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      setPaymentModeData(chartData);
 
       console.log('✅ Stats calculated:', { totalRevenue, totalPayments, avgPayment, activeUsers });
 
@@ -396,6 +428,47 @@ export default function AnalyticsDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Payment Modes Distribution */}
+      {paymentModeData.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+          <h4 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2 font-heading">
+            <CreditCard className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
+            Payment Modes Distribution
+          </h4>
+          <div className="h-48 sm:h-56 md:h-64 flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={paymentModeData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ mode, percent }) => `${mode}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="count"
+                >
+                  {paymentModeData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1F2937',
+                    border: '1px solid #374151',
+                    borderRadius: '8px',
+                    color: '#F9FAFB',
+                    fontSize: '12px'
+                  }}
+                  formatter={(value: any) => [`${value} payments`, 'Count']}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { Download } from 'lucide-react';
 interface Payment {
   _id: string;
   userId: { name: string; email: string };
-  plan: string;
+  plan?: string | null;
   amount: number;
   status: string;
   createdAt: string;
@@ -134,7 +134,7 @@ export default function PaymentsTab() {
               <tr key={payment._id} className="border-b border-slate-700 hover:bg-slate-800 transition">
                 <td className="px-6 py-4">{payment.userId.name}</td>
                 <td className="px-6 py-4">{payment.userId.email}</td>
-                <td className="px-6 py-4 capitalize">{payment.plan.replace('_', ' ')}</td>
+                <td className="px-6 py-4 capitalize">{payment.plan ? payment.plan.replace('_', ' ') : 'N/A'}</td>
                 <td className="px-6 py-4 font-semibold">₹{payment.amount}</td>
                 <td className="px-6 py-4">
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${

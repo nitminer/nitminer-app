@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 
 /**
@@ -8,12 +9,9 @@ import dbConnect from '@/lib/dbConnect';
  */
 export async function POST(req: NextRequest) {
   try {
-    const token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
+    const session = await getServerSession(authOptions);
 
-    if (!token) {
+    if (!session?.user?.email) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -36,7 +34,7 @@ export async function POST(req: NextRequest) {
     // 2. Send notification to other party
 
     console.log(`Closed conversation ${conversationId}`, {
-      userId: token.id,
+      userId: session.user.id,
     });
 
     return NextResponse.json(

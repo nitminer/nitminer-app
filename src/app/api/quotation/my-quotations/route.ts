@@ -1,20 +1,21 @@
-import { getToken } from 'next-auth/jwt';
+import { getServerSession } from 'next-auth/next';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import { Quotation } from '@/models/Quotation';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function GET(request: NextRequest) {
   try {
-    const token = await getToken({ req: request });
+    const session = await getServerSession(authOptions);
 
-    console.log('[My-Quotations API] Token received:', {
-      hasToken: !!token,
-      email: token?.email,
-      role: token?.role,
+    console.log('[My-Quotations API] Session received:', {
+      hasSession: !!session,
+      email: session?.user?.email,
+      role: session?.user?.role,
     });
 
-    if (!token || !token.email) {
-      console.log('[My-Quotations API] No valid token/email');
+    if (!session?.user?.email) {
+      console.log('[My-Quotations API] No valid session/email');
       return NextResponse.json(
         { error: 'Unauthorized - No valid session' },
         { status: 401 }
@@ -25,13 +26,13 @@ export async function GET(request: NextRequest) {
 
     // Query quotations by email
     const quotations = await Quotation.find({
-      userEmail: token.email,
+      userEmail: session.user.email,
     })
       .sort({ createdAt: -1 })
       .lean();
 
     console.log('[My-Quotations API] Fetched user quotations:', {
-      userEmail: token.email,
+      userEmail: session.user.email,
       count: quotations.length,
     });
 

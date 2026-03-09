@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import { RefundRequest } from '@/models/RefundRequest';
 import { Payment } from '@/models/Payment';
 
 export async function POST(request: NextRequest) {
   try {
-    // Get token from NextAuth
-    const token = await getToken({ req: request });
+    // Get session from NextAuth
+    const session = await getServerSession(authOptions);
 
-    if (!token || !token.email) {
+    if (!session?.user?.email) {
       return NextResponse.json(
         { error: 'Unauthorized - No valid session' },
         { status: 401 }
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
     // Connect to database
     await dbConnect();
 
-    const userEmail = token.email;
+    const userEmail = session.user.email;
     const body = await request.json();
     const { paymentId, reason } = body;
 

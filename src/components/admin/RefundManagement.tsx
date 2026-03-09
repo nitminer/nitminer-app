@@ -19,7 +19,7 @@ interface Payment {
 
 const REFUND_PERCENTAGES = [10, 20, 30, 50, 100];
 
-export default function RefundManagement() {
+export default function RefundManagement({ refreshTrigger = 0 }: { refreshTrigger?: number }) {
   const { data: session } = useSession();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [filteredPayments, setFilteredPayments] = useState<Payment[]>([]);
@@ -59,7 +59,7 @@ export default function RefundManagement() {
     if (session?.user?.email) {
       fetchPayments();
     }
-  }, [session?.user?.email]);
+  }, [session?.user?.email, refreshTrigger]);
 
   const handleSelectPayment = (payment: Payment) => {
     setSelectedPayment(payment);
@@ -192,7 +192,7 @@ export default function RefundManagement() {
                           {payment.paymentMethod.toUpperCase()}
                         </span>
                         <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 rounded text-xs font-medium text-green-700 dark:text-green-400">
-                          {payment.planName} - {payment.planDuration.replace(/_/g, ' ')}
+                          {payment.planName || 'Plan'} - {payment.planDuration ? payment.planDuration.replace(/_/g, ' ') : 'N/A'}
                         </span>
                         <span className="text-xs text-gray-500 dark:text-gray-400">
                           {new Date(payment.createdAt).toLocaleDateString()}

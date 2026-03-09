@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import { Conversation } from '@/models/Conversation';
 
@@ -8,9 +9,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const token = await getToken({ req: request });
+    const session = await getServerSession(authOptions);
 
-    if (!token || !token.email) {
+    if (!session?.user?.email) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -39,7 +40,7 @@ export async function PATCH(
     }
 
     // Check access control - user can only close their own, admin can close any
-    if (token.role !== 'admin' && conversation.userEmail !== token.email) {
+    if (session.user.role !== 'admin' && conversation.userEmail !== session.user.email) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
@@ -68,9 +69,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const token = await getToken({ req: request });
+    const session = await getServerSession(authOptions);
 
-    if (!token || !token.email) {
+    if (!session?.user?.email) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -91,7 +92,7 @@ export async function GET(
     }
 
     // Check access control
-    if (token.role !== 'admin' && conversation.userEmail !== token.email) {
+    if (session.user.role !== 'admin' && conversation.userEmail !== session.user.email) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }

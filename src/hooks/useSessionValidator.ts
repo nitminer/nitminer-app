@@ -13,22 +13,27 @@ export function useSessionValidator() {
   // Validate session periodically
   const validateSession = useCallback(async () => {
     // Session is managed via HTTP cookies automatically by NextAuth
-    // This function validates that the session is still valid on the server
+    // For JWT token validation (TrustInn), users should call /api/auth/generate-token first
+    // This hook focuses on NextAuth session stability
     
     if (!session?.user?.email) return;
 
     try {
-      // Get session token from localStorage if available
-      const sessionToken = typeof window !== 'undefined' ? localStorage.getItem('session_token') : null;
+      // Get JWT token from localStorage if available (for TrustInn apps)
+      const jwtToken = typeof window !== 'undefined' ? localStorage.getItem('trustinn_token') : null;
+      
+      // Only validate if we have a JWT token to validate
+      if (!jwtToken) {
+        // No external JWT token, NextAuth session is sufficient
+        return;
+      }
       
       const response = await fetch('/api/auth/session/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          sessionToken: sessionToken || null,
-          email: session.user.email 
+          token: jwtToken
         }),
-        // Credentials are automatically sent with the request due to HTTP cookies
         credentials: 'include',
       });
 
@@ -41,9 +46,11 @@ export function useSessionValidator() {
       const data = await response.json();
 
       if (data.isValid === false) {
-        // Session is invalid, log out the user
+        // JWT token is invalid, log out the user
         console.log('Session invalidated:', data.reason);
-        await signOut({ redirect: true, callbackUrl: '/login' });
+        localStorage.removeItem('trustinn_token');
+        const callbackUrl = typeof window !== 'undefined' ? `${window.location.origin}/login` : '/login';
+        await signOut({ redirect: true, callbackUrl });
       }
     } catch (error) {
       console.warn('Session validation warning (non-critical):', error);
@@ -87,7 +94,8 @@ export function useStorageSessionListener() {
       channel.onmessage = (event) => {
         if (event.data.type === 'logout') {
           console.log('Session invalidated from another tab');
-          signOut({ redirect: true, callbackUrl: '/login' });
+          const callbackUrl = typeof window !== 'undefined' ? `${window.location.origin}/login` : '/login';
+          signOut({ redirect: true, callbackUrl });
         }
       };
     } catch (e) {
@@ -97,7 +105,8 @@ export function useStorageSessionListener() {
         if (e.key === 'session_invalidated' && e.newValue === 'true') {
           console.log('Session invalidated from another tab');
           localStorage.removeItem('session_invalidated');
-          await signOut({ redirect: true, callbackUrl: '/login' });
+          const callbackUrl = typeof window !== 'undefined' ? `${window.location.origin}/login` : '/login';
+          await signOut({ redirect: true, callbackUrl });
         }
       };
 

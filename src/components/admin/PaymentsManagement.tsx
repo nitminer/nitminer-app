@@ -12,11 +12,12 @@ interface Payment {
   amount: number;
   status: string;
   paymentMethod: string;
+  paymentMode?: string;
   paymentId?: string;
   createdAt: string;
 }
 
-export default function PaymentsManagement() {
+export default function PaymentsManagement({ refreshTrigger = 0 }: { refreshTrigger?: number }) {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -31,7 +32,7 @@ export default function PaymentsManagement() {
 
   useEffect(() => {
     fetchPayments();
-  }, [currentPage, searchTerm, statusFilter]);
+  }, [currentPage, searchTerm, statusFilter, refreshTrigger]);
 
   const fetchPayments = async () => {
     try {
@@ -86,7 +87,7 @@ export default function PaymentsManagement() {
   };
 
   const exportPayments = () => {
-    const headers = ['Date', 'Customer', 'Email', 'Amount (₹)', 'Plan', 'Status', 'Payment Method', 'Transaction ID'];
+    const headers = ['Date', 'Customer', 'Email', 'Amount (₹)', 'Plan', 'Status', 'Payment Method', 'Payment Mode', 'Transaction ID'];
     const csvContent = [
       headers.join(','),
       ...payments.map(payment => [
@@ -94,9 +95,10 @@ export default function PaymentsManagement() {
         `"${payment.customerName || 'N/A'}"`,
         payment.userEmail,
         (payment.amount / 100).toFixed(2),
-        payment.planName,
+        payment.planName || 'N/A',
         payment.status,
         payment.paymentMethod || 'razorpay',
+        payment.paymentMode || 'N/A',
         payment.paymentId || 'N/A',
       ].join(','))
     ].join('\n');
@@ -127,7 +129,7 @@ export default function PaymentsManagement() {
         </div>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-2">
           <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
             <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">Total Payments</div>
             <div className="text-2xl font-bold text-blue-900 dark:text-blue-100 font-heading">{totalPayments}</div>
@@ -193,7 +195,10 @@ export default function PaymentsManagement() {
                 Status
               </th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                Method
+                Payment Method
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                Payment Mode
               </th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
                 Transaction ID
@@ -203,7 +208,7 @@ export default function PaymentsManagement() {
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-6 py-4 text-center">
+                <td colSpan={8} className="px-6 py-4 text-center">
                   <div className="flex justify-center">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                   </div>
@@ -211,7 +216,7 @@ export default function PaymentsManagement() {
               </tr>
             ) : payments.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={8} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                   No payments found
                 </td>
               </tr>
@@ -235,7 +240,7 @@ export default function PaymentsManagement() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                      {payment.planName}
+                      {payment.planName || 'N/A'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -244,7 +249,14 @@ export default function PaymentsManagement() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {payment.paymentMethod || 'razorpay'}
+                    <span className="inline-flex px-2 py-1 rounded-md bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 text-xs font-medium">
+                      {payment.paymentMethod || 'razorpay'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    <span className="inline-flex px-2 py-1 rounded-md bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-xs font-medium">
+                      {payment.paymentMode ? payment.paymentMode.split('_').map((word: string) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') : '-'}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 font-mono">
                     {payment.status === 'success' ? payment.paymentId : '-'}

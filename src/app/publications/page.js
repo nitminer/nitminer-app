@@ -1,5 +1,5 @@
 import Header from "@/components/Header";
-import { PublicationsComponent } from "@/components/PublicationsComponent";
+import  PublicationsComponent  from "@/components/PublicationsComponent";
 import { Footer } from "@/components/Footer";
 
 export default function PublicationsPage() {

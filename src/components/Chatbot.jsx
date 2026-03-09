@@ -150,10 +150,6 @@ TrustInn provides 10 Research Based tools which will help you to in one unified 
     },
     {
       patterns: ['pricing', 'price', 'plans', 'cost'],
-      response: `## TrustInn Pricing Plans\n\n### Free Trial Plan...`
-    },
-    {
-      patterns: ['pricing', 'price', 'plans', 'cost'],
       response: `## TrustInn Pricing Plans\n\n### Free Trial Plan\n**Price:** Free  \n**Executions:** 5 executions  \n**Duration:** 7 days\n\n### Starter Plan\n**Price:** ₹499/month or ₹4,990/year  \n**Executions:** 50 monthly executions\n\n### Professional Plan\n**Price:** ₹2,499/month or ₹24,990/year  \n**Executions:** 500 monthly executions\n\n> **💡 Tip:** Contact sales@trustinn.com for enterprise pricing and discounts.`
     },
     {
@@ -202,10 +198,9 @@ TrustInn provides 10 Research Based tools which will help you to in one unified 
         return;
       }
 
-      const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_PERPLEXITY_API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -427,7 +422,7 @@ ${toolsSummary}`
 
       {/* Chatbot Window */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 w-96 h-[600px] bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden border-2 border-gray-200 dark:border-zinc-800" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+        <div className="fixed bottom-6 right-6 w-96 h-[600px] bg-white rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden border-2 border-gray-200" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
           {/* Header */}
           <div className="flex items-center justify-between p-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
             <div>
@@ -455,7 +450,7 @@ ${toolsSummary}`
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50 dark:bg-black">
+          <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50">
             {messages.map((message, index) => (
               <div
                 key={index}
@@ -465,7 +460,7 @@ ${toolsSummary}`
                   className={`max-w-[85%] p-4 rounded-2xl shadow-md ${
                     message.role === 'user'
                       ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
-                      : 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-white'
+                      : 'bg-white text-gray-900'
                   }`}
                 >
                   <div className="text-sm font-medium leading-relaxed chatbot-markdown">
@@ -476,7 +471,7 @@ ${toolsSummary}`
             ))}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-white dark:bg-zinc-800 p-4 rounded-2xl shadow-md">
+                <div className="bg-white p-4 rounded-2xl shadow-md">
                   <div className="flex space-x-2">
                     <div className="w-2 h-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full animate-bounce"></div>
                     <div className="w-2 h-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
@@ -489,7 +484,7 @@ ${toolsSummary}`
           </div>
 
           {/* Input */}
-          <div className="p-5 bg-white dark:bg-zinc-900 border-t-2 border-gray-200 dark:border-zinc-800">
+          <div className="p-5 bg-white border-t-2 border-gray-200">
             <div className="flex gap-3">
               <input
                 type="text"
@@ -497,7 +492,7 @@ ${toolsSummary}`
                 onChange={(e) => setInputMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Ask about TrustInn..."
-                className="flex-1 px-4 py-3 bg-slate-50 dark:bg-zinc-800 rounded-xl focus:ring-2 focus:ring-purple-600 focus:outline-none dark:text-white font-medium border-2 border-gray-200 dark:border-zinc-700"
+                className="flex-1 px-4 py-3 bg-slate-50 rounded-xl focus:ring-2 focus:ring-purple-600 focus:outline-none text-gray-900 font-medium border-2 border-gray-200"
                 disabled={isLoading}
               />
               <button

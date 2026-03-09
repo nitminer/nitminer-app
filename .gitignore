@@ -1,7 +1,12 @@
-.vercel.next
+.vercel
 .next/
 node_modules/
 *.log
 .DS_Store
+
+# env files
+.env
 .env.local
+.env.production
+.env.development
 .env.*.local

@@ -20,7 +20,7 @@ interface Quotation {
   updatedAt: string;
 }
 
-export default function QuotationRequestsManagement() {
+export default function QuotationRequestsManagement({ refreshTrigger = 0 }: { refreshTrigger?: number }) {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('all');
@@ -36,7 +36,7 @@ export default function QuotationRequestsManagement() {
 
   useEffect(() => {
     fetchQuotations();
-  }, [filterStatus]);
+  }, [filterStatus, refreshTrigger]);
 
   const fetchQuotations = async () => {
     try {

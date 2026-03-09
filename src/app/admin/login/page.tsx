@@ -92,26 +92,26 @@ export default function AdminLoginPage() {
   return (
     <>
     <Header/>
-    <main className="min-h-[calc(100vh-200px)] flex items-center justify-center px-4 py-12 bg-white dark:bg-black">
+    <main className="min-h-[calc(100vh-200px)] flex items-center justify-center px-4 py-12 bg-white">
       <div className="w-full max-w-7xl">
         {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-10 gap-0 rounded-2xl overflow-hidden shadow-2xl dark:shadow-2xl">
+        <div className="grid grid-cols-1 lg:grid-cols-10 gap-0 rounded-2xl overflow-hidden shadow-2xl">
           {/* Left Section - Image (60%) */}
-          <div className="hidden lg:flex lg:col-span-6 bg-white dark:bg-gray-900 items-center justify-center relative overflow-hidden">
+          <div className="hidden lg:flex lg:col-span-6 bg-white items-center justify-center relative overflow-hidden">
             {/* Image Content */}
             <div className="relative z-10 w-full h-full flex items-center justify-center p-8">
               <Image
                 src="/auth/login_png.png"
                 alt="Admin Login Illustration"
                 fill
-                className="object-contain dark:bg-amber-100"
+                className="object-contain"
                 priority
               />
             </div>
           </div>
 
           {/* Right Section - Login Form (40%) */}
-          <div className="lg:col-span-4 bg-white dark:bg-gray-800 flex flex-col justify-center p-8 md:p-10">
+          <div className="lg:col-span-4 bg-white flex flex-col justify-center p-8 md:p-10">
             {/* Login Type Selector */}
             <div className="mb-6 flex justify-end">
               <LoginTypeSelector />

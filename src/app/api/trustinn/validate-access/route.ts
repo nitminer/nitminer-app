@@ -106,13 +106,11 @@ export async function POST(req: NextRequest) {
 
     // Parse request body
     const body = await req.json().catch(() => ({}));
-    const executionCount = body.executionCount || 1;
 
     // Check premium status
     const hasPremium = user.isPremium;
-    let remainingTrials = user.trialCount || 0;
+    const remainingTrials = user.trialCount || 0;
     let allowed = false;
-    let trialsUpdated = false;
     let message = '';
 
     // Access logic
@@ -123,21 +121,7 @@ export async function POST(req: NextRequest) {
     } else if (remainingTrials > 0) {
       // Free users with trials remaining
       allowed = true;
-
-      // Only decrement trials every 5 executions (checkpoint)
-      if (executionCount >= 5) {
-        const newTrialCount = Math.max(0, remainingTrials - 1);
-
-        await User.findByIdAndUpdate(userId, {
-          trialCount: newTrialCount,
-        });
-
-        remainingTrials = newTrialCount;
-        trialsUpdated = true;
-        message = `Access granted - Trial used (${newTrialCount} remaining)`;
-      } else {
-        message = `Access granted - ${remainingTrials} trials remaining`;
-      }
+      message = `Access granted - ${remainingTrials} trials remaining`;
     } else {
       // No premium and no trials
       allowed = false;
@@ -153,7 +137,6 @@ export async function POST(req: NextRequest) {
         hasPremium,
         remainingTrials,
         message,
-        trialsUpdated,
         userData: {
           email: user.email,
           name: user.name,

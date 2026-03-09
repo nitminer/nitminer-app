@@ -9,8 +9,8 @@ import ProfileTab from '@/components/dashboard/ProfileTab';
 import PaymentsTab from '@/components/dashboard/PaymentsTab';
 import UsageTab from '@/components/dashboard/UsageTab';
 import RefundTab from '@/components/dashboard/RefundTab';
+import InternshipTab from '@/components/dashboard/InternshipTab';
 import MyQuotations from '@/components/dashboard/MyQuotations';
-import Header from '@/components/Header';
 import Inbox from '@/components/Inbox';
 
 export default function DashboardPage() {
@@ -142,10 +142,10 @@ export default function DashboardPage() {
   // Show loading while checking auth
   if (status === 'loading' || isCheckingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-white dark:from-zinc-950 dark:to-black">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-white">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-gray-900 dark:text-white font-bold">Loading dashboard...</span>
+          <span className="text-gray-900 font-bold">Loading dashboard...</span>
         </div>
       </div>
     );
@@ -172,9 +172,9 @@ export default function DashboardPage() {
 
     if (!hasValidStoredSession) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-white dark:from-zinc-950 dark:to-black">
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-white">
           <div className="text-center">
-            <p className="text-lg font-bold text-gray-700 dark:text-gray-300">Redirecting to login...</p>
+            <p className="text-lg font-bold text-gray-700">Redirecting to login...</p>
           </div>
         </div>
       );
@@ -185,14 +185,23 @@ export default function DashboardPage() {
     <>
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+        
+        /* Hide scrollbars but keep functionality */
+        .hide-scrollbar {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;  /* Chrome, Safari and Opera */
+        }
       `}</style>
       
-      <Header/>
       <DashboardLayout>
         {/* Tabs */}
-        <div className="flex gap-4 border-b border-gray-200 dark:border-zinc-700 mb-8 overflow-x-auto" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+        <div className="sticky top-7 flex gap-4 border-b border-gray-200 mb-8 overflow-x-auto hide-scrollbar bg-gradient-to-b from-slate-50 to-white dark:from-zinc-950 dark:to-zinc-900 z-40" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
           {[
             { id: 'profile', label: 'Profile' },
+            { id: 'internship', label: 'My Internship' },
             { id: 'payments', label: 'Payments' },
             { id: 'refund', label: 'Refunds' },
             { id: 'quotations', label: 'Quotations' },
@@ -204,8 +213,8 @@ export default function DashboardPage() {
               onClick={() => setActiveTab(tab.id)}
               className={`px-6 py-3 font-black transition whitespace-nowrap ${
                 activeTab === tab.id
-                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-600 hover:text-gray-900'
               }`}
               style={{ fontFamily: 'Space Grotesk, sans-serif' }}
             >
@@ -216,6 +225,7 @@ export default function DashboardPage() {
 
         {/* Content */}
         {activeTab === 'profile' && <ProfileTab />}
+        {activeTab === 'internship' && <InternshipTab />}
         {activeTab === 'payments' && <PaymentsTab />}
         {activeTab === 'refund' && <RefundTab />}
         {activeTab === 'quotations' && <MyQuotations />}

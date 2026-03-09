@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
-import { getToken } from 'next-auth/jwt';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import { User } from '@/models/User';
 
@@ -43,25 +44,22 @@ import { User } from '@/models/User';
 
 export async function POST(req: NextRequest) {
   try {
-    // Get NextAuth token
-    const token = await getToken({ 
-      req, 
-      secret: process.env.NEXTAUTH_SECRET 
-    });
+    // Get NextAuth session using proper server-side method
+    const session = await getServerSession(authOptions);
 
-    if (!token) {
-      console.log('No NextAuth session found in generate-token endpoint');
+    if (!session?.user?.id) {
+      console.log('[GENERATE-TOKEN] No NextAuth session found');
       return NextResponse.json(
         { error: 'Unauthorized - no session' }, 
         { status: 401 }
       );
     }
 
-    const userId = token.id;
-    const userEmail = token.email;
-    const userRole = token.role || 'user';
+    const userId = session.user.id;
+    const userEmail = session.user.email;
+    const userRole = session.user.role || 'user';
 
-    console.log('POST /api/auth/generate-token - Session:', {
+    console.log('[GENERATE-TOKEN] Session:', {
       hasSession: true,
       userId,
       userEmail,
@@ -70,7 +68,7 @@ export async function POST(req: NextRequest) {
 
     if (!userId) {
       return NextResponse.json(
-        { error: 'Unauthorized - No user ID in token' },
+        { error: 'Unauthorized - No user ID in session' },
         { status: 401 }
       );
     }

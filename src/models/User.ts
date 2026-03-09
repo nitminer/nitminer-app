@@ -5,6 +5,7 @@ export interface IUser extends Document {
   firstName: string;
   lastName: string;
   email: string;
+  username?: string;
   phone: string;
   password?: string;
   clerkUserId?: string;
@@ -54,6 +55,13 @@ const userSchema = new Schema<IUser>(
       unique: true,
       lowercase: true,
       trim: true,
+    },
+    username: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+      lowercase: true,
     },
     phone: {
       type: String,

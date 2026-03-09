@@ -11,6 +11,7 @@ export default function AdminLoginPage() {
   return (
     <>
       <Header />
+      
       <AdminLoginComponent />
     </>
   );

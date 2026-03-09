@@ -1,0 +1,22 @@
+# Allow all crawlers
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /*.json$
+Disallow: /admin/*
+
+# Allow specific crawlers to be more efficient
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://nitminer.com/sitemap.xml
+
+# Cache control
+Request-rate: 1 request per 1 second

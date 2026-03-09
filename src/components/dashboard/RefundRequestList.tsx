@@ -88,7 +88,7 @@ export default function RefundRequestList() {
         params.append('status', filterStatus);
       }
 
-      const response = await fetch(`/api/refund/requests?${params}`, {
+      const response = await fetch(`/api/refund-requests?${params}`, {
         method: 'GET',
         credentials: 'include',
       });
@@ -96,7 +96,7 @@ export default function RefundRequestList() {
       if (response.ok) {
         const data = await response.json();
         console.log('✅ Refund requests fetched:', data);
-        setRefundRequests(data.refundRequests || []);
+        setRefundRequests(data.data || []);
         setPagination(data.pagination || null);
       } else if (response.status === 401) {
         console.warn('Unauthorized - token may have expired. Please refresh the page.');
@@ -142,9 +142,18 @@ export default function RefundRequestList() {
     <>
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+        
+        /* Hide scrollbars but keep functionality */
+        .hide-scrollbar {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;  /* Chrome, Safari and Opera */
+        }
       `}</style>
 
-      <div className="space-y-6" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+      <div className="space-y-6 hide-scrollbar" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
         {/* Filter */}
         <div className="flex gap-2 flex-wrap">
           {['', 'pending', 'approved', 'rejected', 'completed'].map((status) => (

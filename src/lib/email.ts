@@ -56,6 +56,40 @@ export async function sendWelcomeEmail(email: string, name: string) {
   }
 }
 
+export async function sendInternshipWelcomeEmail(email: string, name: string, googleFormLink: string) {
+  try {
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM,
+      to: email,
+      subject: 'Welcome to NITMiner Internship 🚀',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h1 style="color: #2563eb;">Hello ${name},</h1>
+          
+          <p>Congratulations on enrolling in our internship program at NITMiner Technologies Pvt Ltd!</p>
+          
+          <p>To continue your internship onboarding process, please fill out the form below:</p>
+          
+          <p style="text-align: center; margin: 30px 0;">
+            <a href="${googleFormLink}" 
+               style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+              Fill Internship Onboarding Form
+            </a>
+          </p>
+          
+          <p>We are an education-driven startup promoted by premier institutes like NIT Warangal and IIT Bhilai.</p>
+          
+          <p>Looking forward to your learning journey with us!</p>
+          
+          <p>Team NITMiner Technologies Pvt Ltd</p>
+        </div>
+      `,
+    });
+  } catch (error) {
+    console.error('Failed to send internship welcome email:', error);
+  }
+}
+
 export async function sendOTP(email: string, otp: string) {
   try {
     await transporter.sendMail({

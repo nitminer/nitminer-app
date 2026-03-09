@@ -53,21 +53,21 @@ export default function SettingsTab() {
   };
 
   if (loading) {
-    return <div className="text-white">Loading...</div>;
+    return <div className="text-gray-900 dark:text-white">Loading...</div>;
   }
 
   if (!settings) {
-    return <div className="text-red-400">Failed to load settings</div>;
+    return <div className="text-red-600 dark:text-red-400">Failed to load settings</div>;
   }
 
   return (
     <div className="max-w-2xl">
-      <h2 className="text-3xl font-bold text-white mb-8">System Settings</h2>
+      <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">System Settings</h2>
 
       <div className="space-y-8">
         {/* Free Trials Setting */}
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-          <h3 className="text-xl font-semibold text-white mb-4">Free Trials</h3>
+        <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-6">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Free Trials</h3>
           <label className="flex items-center gap-3 cursor-pointer">
             <input
               type="checkbox"
@@ -77,20 +77,20 @@ export default function SettingsTab() {
               }
               className="w-6 h-6 cursor-pointer"
             />
-            <span className="text-white">Enable free trials for new users</span>
+            <span className="text-gray-900 dark:text-white">Enable free trials for new users</span>
           </label>
-          <p className="text-slate-400 text-sm mt-2">
+          <p className="text-gray-600 dark:text-slate-400 text-sm mt-2">
             When enabled, new users will receive 5 free trials automatically.
           </p>
         </div>
 
         {/* Pricing Settings */}
-        <div className="bg-slate-800 border border-slate-700 rounded-lg p-6">
-          <h3 className="text-xl font-semibold text-white mb-6">Pricing Plans</h3>
+        <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-6">
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Pricing Plans</h3>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-white mb-2">6-Month Plan Price (₹)</label>
+              <label className="block text-gray-900 dark:text-white mb-2">6-Month Plan Price (₹)</label>
               <input
                 type="number"
                 value={settings.pricing.sixMonths / 100}
@@ -103,12 +103,12 @@ export default function SettingsTab() {
                     },
                   })
                 }
-                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded text-white focus:outline-none focus:border-blue-500"
+                className="w-full px-4 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-white mb-2">12-Month Plan Price (₹)</label>
+              <label className="block text-gray-900 dark:text-white mb-2">12-Month Plan Price (₹)</label>
               <input
                 type="number"
                 value={settings.pricing.twelveMonths / 100}
@@ -121,7 +121,7 @@ export default function SettingsTab() {
                     },
                   })
                 }
-                className="w-full px-4 py-2 bg-slate-700 border border-slate-600 rounded text-white focus:outline-none focus:border-blue-500"
+                className="w-full px-4 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 rounded text-gray-900 dark:text-white focus:outline-none focus:border-blue-500"
               />
             </div>
           </div>
@@ -131,12 +131,12 @@ export default function SettingsTab() {
         <div className="flex gap-4">
           <button
             onClick={handleSaveSettings}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg transition font-semibold"
+            className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white px-8 py-3 rounded-lg transition font-semibold"
           >
             Save Settings
           </button>
           {saved && (
-            <div className="flex items-center text-green-400">
+            <div className="flex items-center text-green-600 dark:text-green-400">
               <span>✓ Settings saved successfully</span>
             </div>
           )}

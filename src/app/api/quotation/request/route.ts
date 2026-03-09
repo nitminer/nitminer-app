@@ -1,4 +1,5 @@
-import { getToken } from 'next-auth/jwt';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import { Quotation } from '@/models/Quotation';
@@ -7,9 +8,9 @@ import { sendEmail } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   try {
-    const token = await getToken({ req: request });
+    const session = await getServerSession(authOptions);
 
-    if (!token || !token.email) {
+    if (!session || !session.user?.email) {
       return NextResponse.json(
         { error: 'Unauthorized - No valid session' },
         { status: 401 }
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user details
-    const user = await User.findOne({ email: token.email });
+    const user = await User.findOne({ email: session.user.email });
     if (!user) {
       return NextResponse.json(
         { error: 'User not found' },
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     // Create quotation request
     const quotation = new Quotation({
       userId: user._id,
-      userEmail: token.email,
+      userEmail: session.user.email,
       customerName: user.name || user.email,
       planName,
       planDuration,

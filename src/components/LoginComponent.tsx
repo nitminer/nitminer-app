@@ -11,9 +11,11 @@ export default function LoginComponent() {
   const { data: session, status } = useSession();
   const [formData, setFormData] = useState({
     email: '',
+    username: '',
     password: '',
     rememberMe: false,
   });
+  const [loginMode, setLoginMode] = useState<'email' | 'username'>('email');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -25,6 +27,7 @@ export default function LoginComponent() {
 
     if (session?.user) {
       // User is already logged in, redirect to dashboard
+      console.log('Session found, redirecting to dashboard:', session.user.email);
       router.push('/dashboard');
     }
   }, [session, status, router]);
@@ -38,20 +41,54 @@ export default function LoginComponent() {
     setIsLoading(true);
     setError('');
     try {
+      console.log('[LOGIN] Starting Google login...');
+      
+      // Call signIn - it should set the session cookie
       const result = await signIn('google', {
-        callbackUrl: '/',
         redirect: false,
       });
 
+      console.log('[LOGIN] signIn returned:', result);
+
       if (result?.error) {
-        setError('Google sign-in failed. Please try again.');
-      } else if (result?.ok) {
-        setSuccess(true);
-        // Redirect will be handled by NextAuth
+        console.error('[LOGIN] signIn error:', result.error);
+        setError(result.error || 'Google sign-in failed');
+        setIsLoading(false);
+        return;
       }
+
+      // After successful signIn, the session cookie should be set
+      console.log('[LOGIN] Sign-in successful, checking session...');
+      
+      // Wait longer for session to be available on mobile
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      try {
+        const sessionResponse = await fetch('/api/auth/session');
+        const sessionData = await sessionResponse.json();
+        console.log('[LOGIN] Session check result:', sessionData);
+        
+        if (sessionData?.user?.id) {
+          console.log('[LOGIN] ✅ Session confirmed:', sessionData.user.email);
+          // Session found, use router.push for navigation
+          setTimeout(() => {
+            console.log('[LOGIN] Navigating to dashboard...');
+            router.push('/dashboard');
+          }, 300);
+          return;
+        }
+      } catch (err) {
+        console.log('[LOGIN] Session fetch error:', err);
+      }
+      
+      // If session check fails, still redirect as cookie should be set
+      console.log('[LOGIN] Session check failed, but redirecting anyway');
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 500);
     } catch (err) {
+      console.error('[LOGIN] Google login exception:', err);
       setError('Google sign-in failed. Please try again.');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -71,16 +108,25 @@ export default function LoginComponent() {
     setError('');
     try {
       // Validate input
-      if (!formData.email || !formData.password) {
+      const credential = loginMode === 'email' ? formData.email : formData.username;
+      if (!credential || !formData.password) {
         setError('Please fill in all fields');
         setIsLoading(false);
         return;
       }
 
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-        setError('Please enter a valid email address');
-        setIsLoading(false);
-        return;
+      if (loginMode === 'email') {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+          setError('Please enter a valid email address');
+          setIsLoading(false);
+          return;
+        }
+      } else if (loginMode === 'username') {
+        if (formData.username.length < 3) {
+          setError('Username must be at least 3 characters');
+          setIsLoading(false);
+          return;
+        }
       }
 
       if (formData.password.length < 6) {
@@ -91,7 +137,7 @@ export default function LoginComponent() {
 
       // Use NextAuth signIn for credentials
       const result = await signIn('credentials', {
-        email: formData.email,
+        ...(loginMode === 'email' ? { email: formData.email } : { username: formData.username }),
         password: formData.password,
         redirect: false, // Don't redirect automatically
       });
@@ -105,10 +151,10 @@ export default function LoginComponent() {
       if (result?.ok) {
         // Success - NextAuth will handle the session
         setSuccess(true);
-        console.log('Login successful, redirecting to dashboard...');
+        console.log('Login successful, refreshing session for client...');
         
         // Clear form
-        setFormData({ email: '', password: '', rememberMe: false });
+        setFormData({ email: '', username: '', password: '', rememberMe: false });
         
         // Set login success flags for dashboard and middleware
         localStorage.setItem('login_success', 'true');
@@ -117,11 +163,28 @@ export default function LoginComponent() {
         // Set cookie for middleware (expires in 1 minute)
         document.cookie = `login_success=true; path=/; max-age=60`;
         
-        // Redirect using window.location for more reliable navigation
+        // Try to update session first to ensure it's available
+        try {
+          const updatedSession = await fetch('/api/auth/session');
+          const sessionData = await updatedSession.json();
+          
+          if (sessionData?.user?.email) {
+            console.log('Session confirmed for:', sessionData.user.email);
+          }
+        } catch (sessionCheckErr) {
+          console.warn('Could not verify session, proceeding with redirect anyway:', sessionCheckErr);
+        }
+        
+        // Use router.push first, fallback to window.location if needed
         setTimeout(() => {
           console.log('Redirecting to dashboard now...');
-          window.location.href = '/dashboard';
-        }, 300);
+          try {
+            router.push('/dashboard');
+          } catch (err) {
+            console.warn('Router push failed, using window.location:', err);
+            window.location.href = '/dashboard';
+          }
+        }, 500);
         return;
       }
     } catch (err) {
@@ -132,10 +195,10 @@ export default function LoginComponent() {
   };
 
   return (
-    <main className="min-h-[calc(100vh-200px)] flex items-center justify-center px-4 py-12 bg-white dark:bg-black">
-      <div className="w-full max-w-7xl">
+    <main className="min-h-screen flex items-center justify-center px-4 py-2 pt-20 sm:pt-36 md:pt-0 bg-white dark:bg-black">
+      <div className="w-full max-w-6xl">
         {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-10 gap-0 rounded-2xl overflow-hidden shadow-2xl dark:shadow-2xl">
+        <div className="grid grid-cols-1 lg:grid-cols-10  gap-0 rounded-2xl overflow-hidden  dark:shadow-2xl">
           {/* Left Section - Image (60%) */}
           <div className="hidden lg:flex lg:col-span-6 bg-white dark:bg-gray-900 items-center justify-center relative overflow-hidden">
             {/* Image Content */}
@@ -151,7 +214,7 @@ export default function LoginComponent() {
           </div>
 
           {/* Right Section - Login Form (40%) */}
-          <div className="lg:col-span-4 bg-white dark:bg-gray-800 flex flex-col justify-center p-8 md:p-10">
+          <div className="lg:col-span-4 bg-white dark:bg-gray-800 flex flex-col justify-center p-8 md:p-5 ">
             {/* Login Type Selector */}
             <div className="mb-6 flex justify-end">
               <LoginTypeSelector />
@@ -189,25 +252,82 @@ export default function LoginComponent() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Input */}
-            <div className="relative group">
-              <label htmlFor="email" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                Email Address
-              </label>
-              <div className="relative">
-                <FiMail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-blue-500 transition-colors" size={20} />
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="your@email.com"
-                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all placeholder-gray-400 dark:placeholder-gray-500"
-                  disabled={isLoading}
-                />
-              </div>
+            {/* Login Mode Toggle */}
+            <div className="flex gap-2 mb-4 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMode('email');
+                  setFormData(prev => ({ ...prev, email: '', username: '' }));
+                }}
+                className={`flex-1 py-2 px-3 rounded font-medium transition-all ${
+                  loginMode === 'email'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300'
+                }`}
+              >
+                <FiMail className="inline mr-2" size={16} />
+                Email
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginMode('username');
+                  setFormData(prev => ({ ...prev, email: '', username: '' }));
+                }}
+                className={`flex-1 py-2 px-3 rounded font-medium transition-all ${
+                  loginMode === 'username'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300'
+                }`}
+              >
+                User ID
+              </button>
             </div>
+
+            {/* Email Input - Show when email mode */}
+            {loginMode === 'email' && (
+              <div className="relative group">
+                <label htmlFor="email" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <FiMail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-blue-500 transition-colors" size={20} />
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="your@email.com"
+                    className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all placeholder-gray-400 dark:placeholder-gray-500"
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Username Input - Show when username mode */}
+            {loginMode === 'username' && (
+              <div className="relative group">
+                <label htmlFor="username" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  Username / User ID
+                </label>
+                <div className="relative">
+                  <FiMail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 group-focus-within:text-blue-500 transition-colors" size={20} />
+                  <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    value={formData.username}
+                    onChange={handleChange}
+                    placeholder="e.g., mca01"
+                    className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all placeholder-gray-400 dark:placeholder-gray-500"
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Password Input */}
             <div className="relative group">

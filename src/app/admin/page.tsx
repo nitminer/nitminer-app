@@ -1,44 +1,28 @@
 'use client';
 
-import { useState } from 'react';
-import OverviewTab from '@/components/admin/OverviewTab';
-import UsersTab from '@/components/admin/UsersTab';
-import PaymentsTab from '@/components/admin/PaymentsTab';
-import SettingsTab from '@/components/admin/SettingsTab';
-import AdminLayout from '@/components/admin/AdminLayout';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState('overview');
+  const router = useRouter();
+  const { data: session, status } = useSession();
 
+  useEffect(() => {
+    // If admin is logged in, redirect to dashboard
+    if (status === 'authenticated' && session?.user?.role === 'admin') {
+      console.log('[AdminPage] Admin detected, redirecting to dashboard');
+      router.push('/admin/dashboard');
+    }
+  }, [session, status, router]);
+
+  // Show loading state while checking session
   return (
-    <AdminLayout>
-      {/* Tabs */}
-      <div className="flex gap-4 border-b border-slate-700 mb-8 overflow-x-auto">
-        {[
-          { id: 'overview', label: 'Overview' },
-          { id: 'users', label: 'Users' },
-          { id: 'payments', label: 'Payments' },
-          { id: 'settings', label: 'Settings' },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-6 py-3 font-medium transition whitespace-nowrap ${
-              activeTab === tab.id
-                ? 'text-blue-400 border-b-2 border-blue-400'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+    <div className="flex items-center justify-center min-h-screen bg-white dark:bg-black">
+      <div className="text-center">
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+        <p className="text-gray-600 dark:text-gray-400">Redirecting to dashboard...</p>
       </div>
-
-      {/* Content */}
-      {activeTab === 'overview' && <OverviewTab />}
-      {activeTab === 'users' && <UsersTab />}
-      {activeTab === 'payments' && <PaymentsTab />}
-      {activeTab === 'settings' && <SettingsTab />}
-    </AdminLayout>
+    </div>
   );
 }

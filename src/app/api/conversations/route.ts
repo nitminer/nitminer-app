@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import { Conversation } from '@/models/Conversation';
 import { ConversationMessage } from '@/models/ConversationMessage';
@@ -10,12 +11,9 @@ import { ConversationMessage } from '@/models/ConversationMessage';
  */
 export async function GET(req: NextRequest) {
   try {
-    const token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
+    const session = await getServerSession(authOptions);
 
-    if (!token) {
+    if (!session?.user?.email) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -31,11 +29,11 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     let query: any = {};
-    if (role === 'user') {
+    if (role === 'user' && session.user.role !== 'admin') {
       // Users see their own conversations
-      query.userEmail = token.email;
+      query.userEmail = session.user.email;
     }
-    // Admins see all conversations
+    // Admins see all conversations (query stays empty {})
 
     const conversations = await Conversation.find(query)
       .sort({ lastMessageAt: -1 })
@@ -74,12 +72,9 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
+    const session = await getServerSession(authOptions);
 
-    if (!token) {
+    if (!session?.user?.email) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -98,8 +93,8 @@ export async function POST(req: NextRequest) {
     }
 
     const conversation = new Conversation({
-      userId: token.id,
-      userEmail: token.email,
+      userId: session.user.id,
+      userEmail: session.user.email,
       subject,
       status: 'open',
       lastMessage: '',

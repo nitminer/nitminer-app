@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import { User } from '@/models/User';
 import { Payment } from '@/models/Payment';
+import { profileCache } from '@/lib/cache';
 
 /**
  * POST /api/user/profile
- * Get user profile by email (for stored session fallback)
+ * Get user profile by email with Redis caching (for stored session fallback)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -31,6 +32,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
     }
 
+    // Try to get from cache first (30 minute TTL)
+    const cacheKey = `profile:${email.toLowerCase()}`;
+    let cachedProfile = await profileCache.get(cacheKey);
+
+    if (cachedProfile) {
+      console.log(`✅ Profile cache hit for ${email}`);
+      return NextResponse.json({
+        user: cachedProfile,
+        fromCache: true,
+      });
+    }
+
     await dbConnect();
 
     const user = await User.findOne({ email: email.toLowerCase() }).lean();
@@ -50,16 +63,25 @@ export async function POST(request: NextRequest) {
       .sort({ createdAt: -1 })
       .lean();
 
+    const profileData = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isPremium: user.isPremium,
+      trialCount: user.trialCount,
+      subscriptionExpiry: user.subscriptionExpiry,
+      lastPayment: latestPayment ? latestPayment.createdAt : null,
+    };
+
+    // Cache the profile for 30 minutes
+    await profileCache.set(cacheKey, profileData, 1800);
+
+    console.log(`📝 Profile fetched and cached for ${email}`);
+
     return NextResponse.json({
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isPremium: user.isPremium,
-        trialCount: user.trialCount,
-        subscriptionExpiry: user.subscriptionExpiry,
-      },
+      user: profileData,
+      fromCache: false,
     });
   } catch (error) {
     console.error('Profile fetch error:', error);

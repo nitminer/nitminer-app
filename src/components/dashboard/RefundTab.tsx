@@ -55,9 +55,18 @@ export default function RefundTab() {
     <>
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+        
+        /* Hide scrollbars but keep functionality */
+        .hide-scrollbar {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;  /* Chrome, Safari and Opera */
+        }
       `}</style>
 
-      <div className="space-y-8" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
+      <div className="space-y-8 hide-scrollbar" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
         {/* Header */}
         <div className="flex items-center gap-3">
           <Package className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400 flex-shrink-0" />

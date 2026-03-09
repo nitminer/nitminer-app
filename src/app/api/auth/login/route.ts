@@ -3,9 +3,13 @@ import dbConnect from '@/lib/dbConnect';
 import { User } from '@/models/User';
 import jwt from 'jsonwebtoken';
 import { generateDeviceInfo } from '@/lib/deviceFingerprint';
+import { authRateLimiter } from '@/lib/rateLimiter';
+import { sessionStore } from '@/lib/sessionStore';
+import { userCache } from '@/lib/cache';
 
 interface LoginRequestBody {
-  email: string;
+  email?: string;
+  username?: string;
   password: string;
   rememberMe?: boolean;
 }
@@ -13,45 +17,72 @@ interface LoginRequestBody {
 /**
  * POST /api/auth/login
  * 
- * Secure login endpoint with Clerk integration
- * 1. Validates email and password against MongoDB
- * 2. Verifies user in Clerk is active
- * 3. Creates JWT access token & refresh token
- * 4. Stores tokens in httpOnly cookies (secure)
- * 5. Creates session record for tracking
- * 6. Returns user data for frontend
+ * Secure login endpoint with Clerk integration + Redis optimization
+ * 1. Rate limit login attempts (Redis)
+ * 2. Validates email and password against MongoDB
+ * 3. Verifies user in Clerk is active
+ * 4. Creates JWT access token & refresh token
+ * 5. Stores tokens in httpOnly cookies (secure)
+ * 6. Creates session record in Redis (for fast retrieval)
+ * 7. Returns user data for frontend
  */
 export async function POST(req: NextRequest) {
   try {
     const body: LoginRequestBody = await req.json();
-    const { email, password, rememberMe = false } = body;
+    const { email, username, password, rememberMe = false } = body;
 
     // Validate required fields
-    if (!email || !password) {
+    if ((!email && !username) || !password) {
       return NextResponse.json(
-        { error: 'Email and password are required' },
+        { error: 'Email/username and password are required' },
         { status: 400 }
       );
     }
 
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    // Get client IP for rate limiting
+    const clientIp = req.headers.get('x-forwarded-for') ||
+      req.headers.get('x-real-ip') ||
+      'unknown';
+
+    // Apply rate limiting (5 attempts per 15 minutes)
+    const { allowed, remaining, resetTime } = await authRateLimiter.isAllowed(clientIp);
+
+    if (!allowed) {
       return NextResponse.json(
-        { error: 'Invalid email format' },
-        { status: 400 }
+        { error: 'Too many login attempts. Please try again later.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(Math.ceil((resetTime - Date.now()) / 1000)),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': String(resetTime),
+          },
+        }
       );
     }
 
     // Connect to MongoDB
     await dbConnect();
 
-    // Find user by email
-    const user = await User.findOne({ email: email.toLowerCase() });
+    // Find user by email or username
+    let user;
+    if (email) {
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return NextResponse.json(
+          { error: 'Invalid email format' },
+          { status: 400 }
+        );
+      }
+      user = await User.findOne({ email: email.toLowerCase() });
+    } else if (username) {
+      user = await User.findOne({ username: username.toLowerCase() });
+    }
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Invalid email or password' },
+        { error: 'Invalid email/username or password' },
         { status: 401 }
       );
     }
@@ -109,6 +140,43 @@ export async function POST(req: NextRequest) {
       { expiresIn: rememberMe ? '30d' : '7d' }
     );
 
+    // Store session in Redis for fast retrieval (24 hour TTL)
+    const sessionId = `session:${user._id}:${Date.now()}`;
+    const sessionTtl = rememberMe ? 30 * 24 * 3600 : 7 * 24 * 3600; // seconds
+    
+    await sessionStore.createSession(
+      sessionId,
+      {
+        userId: user._id.toString(),
+        email: user.email,
+        role: user.role,
+        clerkUserId: user.clerkUserId || null,
+        tokenVersion: user.tokenVersion || 0,
+        loginIp: clientIp,
+        userAgent: req.headers.get('user-agent') || '',
+        createdAt: Date.now(),
+        expiresAt: Date.now() + sessionTtl * 1000,
+      },
+      sessionTtl
+    );
+
+    // Cache user profile in Redis (1 hour TTL)
+    await userCache.set(
+      `profile:${user._id}`,
+      {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        clerkUserId: user.clerkUserId,
+        isPremium: user.isPremium,
+        trialCount: user.trialCount,
+      },
+      3600
+    );
+
     // Create response
     const response = NextResponse.json(
       {
@@ -163,15 +231,8 @@ export async function POST(req: NextRequest) {
       path: '/',
     });
 
-    // Create session tracking record (for device fingerprinting & security)
-    try {
-      // This could be moved to a separate session tracking call if needed
-      // For now, just log it
-      console.log(`User ${user._id} logged in at ${new Date().toISOString()}`);
-    } catch (sessionError) {
-      console.error('Session tracking error:', sessionError);
-      // Don't fail login for session tracking errors
-    }
+    // Log successful login
+    console.log(`✅ User ${user._id} (${user.email}) logged in successfully`);
 
     return response;
   } catch (error) {
@@ -187,7 +248,7 @@ export async function POST(req: NextRequest) {
 /**
  * GET /api/auth/login
  * 
- * Returns login status and current session
+ * Returns login status and current session (with Redis caching)
  */
 export async function GET(req: NextRequest) {
   try {
@@ -218,10 +279,34 @@ export async function GET(req: NextRequest) {
         );
       }
 
+      // Try to get user profile from cache first
+      let userProfile = await userCache.get(`profile:${decoded.userId}`);
+
+      // If not in cache, fetch from DB and cache it
+      if (!userProfile) {
+        await dbConnect();
+        const user = await User.findById(decoded.userId).lean();
+        if (user) {
+          userProfile = {
+            _id: user._id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            phone: user.phone,
+            role: user.role,
+            clerkUserId: user.clerkUserId,
+            isPremium: user.isPremium,
+            trialCount: user.trialCount,
+          };
+          // Cache it for future requests
+          await userCache.set(`profile:${decoded.userId}`, userProfile, 3600);
+        }
+      }
+
       return NextResponse.json(
         {
           authenticated: true,
-          user: {
+          user: userProfile || {
             userId: decoded.userId,
             email: decoded.email,
             role: decoded.role,
