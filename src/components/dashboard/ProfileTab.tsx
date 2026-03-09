@@ -1,7 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Check, X } from 'lucide-react';
+import { Check, X, RefreshCw } from 'lucide-react';
+
+interface Subscription {
+  _id?: string;
+  plan?: string;
+  planName?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+interface LatestPayment {
+  id?: string;
+  planName?: string;
+  planDuration?: string;
+  amount?: number;
+  completedAt?: string;
+}
 
 interface UserProfile {
   name: string;
@@ -10,11 +27,15 @@ interface UserProfile {
   isPremium: boolean;
   trialCount: number;
   subscriptionExpiry: string | null;
+  subscription?: Subscription | null;
 }
 
 export default function ProfileTab() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [latestPayment, setLatestPayment] = useState<LatestPayment | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   useEffect(() => {
     fetchUserProfile();
@@ -32,6 +53,9 @@ export default function ProfileTab() {
         const data = await response.json();
         console.log('[ProfileTab] User data loaded:', data.user?.email);
         setUser(data.user);
+        if (data.latestPayment) {
+          setLatestPayment(data.latestPayment);
+        }
       } else {
         const errorData = await response.json();
         console.error('[ProfileTab] API error:', response.status, errorData);
@@ -81,6 +105,36 @@ export default function ProfileTab() {
     }
   };
 
+  const handleRefreshSubscription = async () => {
+    try {
+      setRefreshing(true);
+      setMessage(null);
+
+      const response = await fetch('/api/user/me', {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('[ProfileTab] Subscription synced:', data.user?.email);
+        setUser(data.user);
+        if (data.latestPayment) {
+          setLatestPayment(data.latestPayment);
+        }
+        setMessage({ type: 'success', text: 'Subscription synced successfully!' });
+      } else {
+        const errorData = await response.json();
+        setMessage({ type: 'error', text: errorData.error || 'Failed to sync subscription' });
+      }
+    } catch (error) {
+      console.error('[ProfileTab] Sync error:', error);
+      setMessage({ type: 'error', text: 'Error syncing subscription. Please try again.' });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   if (loading) {
     return (
       <>
@@ -112,9 +166,32 @@ export default function ProfileTab() {
       `}</style>
       
       <div className="max-w-4xl mx-auto" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-        <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-6 sm:mb-8" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-          Profile
-        </h2>
+        <div className="flex justify-between items-center mb-6 sm:mb-8">
+          <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+            Profile
+          </h2>
+          <button
+            onClick={handleRefreshSubscription}
+            disabled={refreshing}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 sm:px-5 py-2 rounded-lg transition shadow-lg font-bold text-sm sm:text-base"
+            style={{ fontFamily: 'Space Grotesk, sans-serif' }}
+            title="Refresh subscription status"
+          >
+            <RefreshCw size={16} className={`flex-shrink-0 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Syncing...' : 'Refresh'}
+          </button>
+        </div>
+
+        {/* Status Message */}
+        {message && (
+          <div className={`mb-6 p-4 rounded-lg font-bold text-sm sm:text-base ${
+            message.type === 'success'
+              ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+              : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+          }`}>
+            {message.text}
+          </div>
+        )}
 
         <div className="space-y-4 sm:space-y-6">
           {/* User Information */}
@@ -151,7 +228,7 @@ export default function ProfileTab() {
             </h3>
             <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
               <div className="text-center sm:text-left flex-shrink-0">
-                <p className="text-3xl sm:text-4xl font-black text-blue-600 dark:text-blue-400" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                <p className="text-xl sm:text-2xl font-black text-blue-600 dark:text-blue-400" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
                   {user.trialCount}
                 </p>
                 <p className="text-gray-600 dark:text-gray-400 font-bold text-sm sm:text-base">Trials Remaining</p>
@@ -160,7 +237,7 @@ export default function ProfileTab() {
                 <div className="w-full bg-gray-200 dark:bg-zinc-700 rounded-full h-2.5 sm:h-3">
                   <div
                     className="bg-blue-600 h-2.5 sm:h-3 rounded-full transition-all"
-                    style={{ width: `${(user.trialCount / 9) * 100}%` }}
+                    style={{ width: `${(user.trialCount / 50000) * 100}%` }}
                   ></div>
                 </div>
                 {/* <p className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mt-2 font-medium">
@@ -195,9 +272,19 @@ export default function ProfileTab() {
                 <p className="text-green-700 dark:text-green-300 font-bold text-sm sm:text-base">
                   You are enjoying full access to all tools!
                 </p>
-                {user.subscriptionExpiry && (
+                {user.subscription?.endDate && (
+                  <p className="text-green-700 dark:text-green-300 text-xs sm:text-sm mt-2 font-medium">
+                    Expires on: {new Date(user.subscription.endDate).toLocaleDateString()}
+                  </p>
+                )}
+                {user.subscriptionExpiry && !user.subscription?.endDate && (
                   <p className="text-green-700 dark:text-green-300 text-xs sm:text-sm mt-2 font-medium">
                     Expires on: {new Date(user.subscriptionExpiry).toLocaleDateString()}
+                  </p>
+                )}
+                {!user.subscription?.endDate && !user.subscriptionExpiry && (
+                  <p className="text-green-700 dark:text-green-300 text-xs sm:text-sm mt-2 font-medium">
+                    Lifetime Premium Active
                   </p>
                 )}
               </div>
@@ -216,6 +303,51 @@ export default function ProfileTab() {
               </div>
             )}
           </div>
+
+          {/* Payment Details */}
+          {user.isPremium && user.subscription && typeof user.subscription === 'object' && latestPayment && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl sm:rounded-2xl shadow-xl p-4 sm:p-6 border border-blue-200 dark:border-blue-800">
+              <h3 className="text-lg sm:text-xl font-black text-blue-900 dark:text-blue-100 mb-4" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+                Payment Details
+              </h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-start">
+                  <span className="text-blue-700 dark:text-blue-300 font-bold text-sm">Plan:</span>
+                  <span className="text-blue-900 dark:text-blue-100 font-black text-sm capitalize">
+                    {user.subscription?.planName || user.subscription?.plan || 'Premium'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-blue-700 dark:text-blue-300 font-bold text-sm">Purchase Date:</span>
+                  <span className="text-blue-900 dark:text-blue-100 font-black text-sm">
+                    {latestPayment?.completedAt ? new Date(latestPayment.completedAt).toLocaleDateString() : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-blue-700 dark:text-blue-300 font-bold text-sm">Amount Paid:</span>
+                  <span className="text-blue-900 dark:text-blue-100 font-black text-sm">
+                    ₹{latestPayment?.amount?.toLocaleString('en-IN') || 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-blue-700 dark:text-blue-300 font-bold text-sm">Subscription Ends:</span>
+                  <span className="text-blue-900 dark:text-blue-100 font-black text-sm">
+                    {user.subscription?.endDate ? new Date(user.subscription.endDate).toLocaleDateString() : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-start">
+                  <span className="text-blue-700 dark:text-blue-300 font-bold text-sm">Status:</span>
+                  <span className={`font-black text-xs px-3 py-1 rounded-full ${
+                    user.subscription?.status === 'active'
+                      ? 'bg-green-200 dark:bg-green-900/50 text-green-800 dark:text-green-200'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+                  }`}>
+                    {user.subscription?.status === 'active' ? 'Active' : user.subscription?.status || 'Unknown'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>

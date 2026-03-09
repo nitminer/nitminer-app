@@ -38,6 +38,8 @@ import { User } from '@/models/User';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    console.log("Validation Request Body:", body); // DEBUG LOG
+    
     const { token } = body;
 
     if (!token) {

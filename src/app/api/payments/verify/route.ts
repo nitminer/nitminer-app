@@ -1,4 +1,5 @@
-import { getToken } from 'next-auth/jwt';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import { Payment } from '@/models/Payment';
 import { User } from '@/models/User';
@@ -16,15 +17,15 @@ const razorpay = new Razorpay({
 
 export async function POST(req: NextRequest) {
   try {
-    // Get token from NextAuth session
-    const token = await getToken({ req });
+    // Get session from NextAuth
+    const session = await getServerSession(authOptions);
 
-    if (!token?.email) {
+    if (!session?.user?.email) {
       console.log('Payment verify - No session found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userEmail = token.email;
+    const userEmail = session.user.email;
 
     console.log('Payment verify - Session:', userEmail);
 
@@ -60,6 +61,7 @@ export async function POST(req: NextRequest) {
         status: paymentDetails.status,
         method: paymentDetails.method,
       });
+      console.log('📱 Payment Mode:', paymentDetails.method);
 
       // Only accept payments with status 'captured'
       if (paymentDetails.status !== 'captured') {
@@ -88,6 +90,7 @@ export async function POST(req: NextRequest) {
       { orderId: razorpay_order_id, userEmail },
       {
         paymentId: razorpay_payment_id,
+        paymentMode: paymentDetails.method, // Store the payment method: 'upi', 'credit_card', etc.
         status: 'success',
         completedAt: new Date(),
       },
@@ -119,6 +122,7 @@ export async function POST(req: NextRequest) {
     // Update user premium status and subscription
     if (user) {
       user.isPremium = true;
+      user.subscriptionExpiry = endDate; // Also set subscriptionExpiry for the API to check
       user.subscription = {
         plan: payment.planDuration, // Use planDuration (1_month, 6_months, 12_months) not planName
         status: 'active',
@@ -127,7 +131,11 @@ export async function POST(req: NextRequest) {
         paymentId: payment._id,
       };
       await user.save();
-      console.log('✅ User premium status updated');
+      console.log('✅ User premium status updated:', {
+        isPremium: user.isPremium,
+        subscriptionExpiry: user.subscriptionExpiry,
+        subscription: user.subscription,
+      });
     }
 
     // Generate receipt and send email
@@ -195,7 +203,7 @@ export async function POST(req: NextRequest) {
       // The payment is already verified and stored
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       message: 'Payment verified successfully',
       payment: {
@@ -204,8 +212,22 @@ export async function POST(req: NextRequest) {
         planName: payment.planName,
         planDuration: payment.planDuration,
         status: 'success',
+        paymentMode: payment.paymentMode, // Include the payment method (upi, credit_card, etc.)
       },
     });
+
+    // Set login_success cookie to help middleware allow the user through
+    response.cookies.set({
+      name: 'login_success',
+      value: 'true',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 5, // 5 minutes
+      path: '/',
+    });
+
+    return response;
   } catch (error) {
     console.error('Payment verification error:', error);
     return NextResponse.json({ error: 'Failed to verify payment' }, { status: 500 });

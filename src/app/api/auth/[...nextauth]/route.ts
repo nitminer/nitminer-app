@@ -33,56 +33,42 @@ export const authOptions: NextAuthOptions = {
       name: 'Credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
+        username: { label: 'Username', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
         try {
-          console.log('Authorize called with:', { email: credentials?.email, hasPassword: !!credentials?.password });
-          if (!credentials?.email || !credentials?.password) {
+          console.log('Authorize called with:', { email: credentials?.email, username: credentials?.username, hasPassword: !!credentials?.password });
+          
+          // Check for either email or username
+          if (!credentials?.password || (!credentials?.email && !credentials?.username)) {
             console.log('Missing credentials');
-            throw new Error('Email and password are required');
+            throw new Error('Email/username and password are required');
           }
 
-          // Demo admin credentials - check/create admin user
-          if (credentials.email === 'admin@nitminer.com' && credentials.password === '12345678') {
-            console.log('Admin login attempt');
-            await dbConnect();
-
-            let adminUser = await User.findOne({ email: 'admin@nitminer.com' });
-
-            if (!adminUser) {
-              console.log('Creating admin user');
-              // Create demo admin user if it doesn't exist
-              adminUser = new User({
-                firstName: 'Demo',
-                lastName: 'Admin',
-                email: 'admin@nitminer.com',
-                phone: '+1-000-000-0000',
-                password: await bcrypt.hash('12345678', 12),
-                role: 'admin',
-                subscription: 'free',
-                isActive: true,
-              });
-              await adminUser.save();
-              console.log('Admin user created');
-            } else {
-              console.log('Admin user found');
-            }
-
+          // Demo admin credentials - no database required
+          if (credentials.email?.toLowerCase() === 'admin@nitminer.com' && credentials.password === '12345678') {
+            console.log('Admin login successful');
             return {
-              id: adminUser._id.toString(),
-              email: adminUser.email,
-              name: `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim() || 'Admin',
-              firstName: adminUser.firstName,
-              lastName: adminUser.lastName,
-              role: adminUser.role,
+              id: 'admin',
+              email: 'admin@nitminer.com',
+              name: 'Administrator',
+              firstName: 'Admin',
+              lastName: 'User',
+              role: 'admin',
             };
           }
 
           console.log('Regular user login');
           await dbConnect();
 
-          const user = await User.findOne({ email: credentials.email }).select('+password');
+          // Find user by email or username
+          let user;
+          if (credentials.email) {
+            user = await User.findOne({ email: credentials.email.toLowerCase() }).select('+password');
+          } else if (credentials.username) {
+            user = await User.findOne({ username: credentials.username.toLowerCase() }).select('+password');
+          }
 
           if (!user) {
             console.log('User not found');
@@ -125,12 +111,28 @@ export const authOptions: NextAuthOptions = {
       // Allow sign in for all users
       return true;
     },
+    async redirect({ url, baseUrl }) {
+      // Redirect admins to dashboard after login
+      // url is the destination URL (could be relative or absolute)
+      // baseUrl is 'http://localhost:3000' or your deployment URL
+      
+      // If the callback is called without a specific redirect URL,
+      // or if it's trying to go to /admin, redirect to /admin/dashboard
+      if (url === baseUrl || url.endsWith('/admin')) {
+        return `${baseUrl}/admin/dashboard`;
+      }
+      
+      // Otherwise allow the redirect to proceed
+      return url.startsWith(baseUrl) ? url : baseUrl;
+    },
     async jwt({ token, user, account }: any) {
       console.log('[NEXTAUTH JWT] Called with:', {
         hasUser: !!user,
         userId: user?.id,
+        userRole: user?.role,
         hasAccount: !!account,
         tokenId: token?.id,
+        tokenRole: token?.role,
       });
       
       if (user) {
@@ -138,11 +140,11 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role,
+          role: user.role || 'user',
         });
         
         token.id = user.id;
-        token.role = user.role;
+        token.role = user.role || 'user'; // Ensure role defaults to 'user'
         token.email = user.email;
         token.name = user.name;
         token.firstName = user.firstName;
@@ -151,6 +153,7 @@ export const authOptions: NextAuthOptions = {
         console.log('[NEXTAUTH JWT] No user, token remains:', {
           id: token?.id,
           email: token?.email,
+          role: token?.role,
         });
       }
 
@@ -170,6 +173,7 @@ export const authOptions: NextAuthOptions = {
 
       // Handle Google Sign-In
       if (account?.provider === 'google') {
+        console.log('[NEXTAUTH JWT] Google provider detected, processing...');
         try {
           await dbConnect();
 
@@ -181,27 +185,47 @@ export const authOptions: NextAuthOptions = {
             dbUser = await User.findOne({ email: token.email });
 
             if (dbUser) {
+              console.log('[NEXTAUTH JWT] Found existing user by email, linking Google:', token.email);
               // Link Google account to existing user
               dbUser.googleId = token.sub;
               await dbUser.save();
             } else {
+              console.log('[NEXTAUTH JWT] Creating new Google user:', token.email);
+              // Parse full name into first and last name
+              const nameParts = (token.name || 'Google User').split(' ');
+              const firstName = nameParts[0] || 'Google';
+              const lastName = nameParts.slice(1).join(' ') || 'User';
+              
               // Create new user from Google
               dbUser = await User.create({
-                name: token.name,
+                firstName,
+                lastName,
                 email: token.email,
+                phone: '+1-000-000-0000', // Default phone for Google users
                 googleId: token.sub,
-                role: 'user',
+                role: 'user', // Explicitly set role for Google users
                 trialCount: 5,
+                isPremium: false,
+                subscription: 'free',
+                isActive: true,
               });
             }
+          } else {
+            console.log('[NEXTAUTH JWT] Found user by googleId:', token.email);
           }
 
           token.id = dbUser._id.toString();
-          token.role = dbUser.role;
+          token.role = dbUser.role || 'user'; // Ensure role is set from database
           token.email = dbUser.email; // Store email from database user
+          console.log('[NEXTAUTH JWT] Google user processed:', {
+            email: dbUser.email,
+            role: dbUser.role,
+            id: dbUser._id.toString(),
+          });
         } catch (error) {
           console.error('Google auth error:', error);
           // Don't fail the auth, just use default values
+          token.role = token.role || 'user'; // Fallback to user role
         }
       }
 
@@ -213,6 +237,7 @@ export const authOptions: NextAuthOptions = {
         tokenKeys: token ? Object.keys(token) : [],
         id: token?.id,
         email: token?.email,
+        role: token?.role,
       });
       
       // ALWAYS ensure session.user exists
@@ -229,12 +254,13 @@ export const authOptions: NextAuthOptions = {
           id: token.id,
           email: token.email,
           name: token.name,
+          role: token.role || 'user',
         });
         
         session.user.id = token.id;
         session.user.email = token.email;
         session.user.name = token.name;
-        session.user.role = token.role || 'user';
+        session.user.role = token.role || 'user'; // Ensure role defaults to 'user'
         session.user.firstName = token.firstName;
         session.user.lastName = token.lastName;
       } else {
@@ -246,6 +272,7 @@ export const authOptions: NextAuthOptions = {
         userId: session.user?.id,
         email: session.user?.email,
         name: session.user?.name,
+        role: session.user?.role,
       });
       
       return session;
@@ -264,10 +291,12 @@ export const authOptions: NextAuthOptions = {
       name: 'next-auth.session-token',
       options: {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production' && process.env.NEXTAUTH_COOKIE_SECURE === 'true',
+        // Only enforce secure in production with HTTPS
+        secure: process.env.NODE_ENV === 'production' && process.env.NEXTAUTH_URL?.startsWith('https'),
         sameSite: 'lax',
         path: '/',
-        domain: process.env.NEXTAUTH_COOKIE_DOMAIN || undefined,
+        // Only set domain for production URLs, otherwise let browser handle it
+        domain: process.env.NODE_ENV === 'production' && process.env.NEXTAUTH_COOKIE_DOMAIN ? process.env.NEXTAUTH_COOKIE_DOMAIN : undefined,
         maxAge: 30 * 24 * 60 * 60, // 30 days
       },
     },

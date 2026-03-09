@@ -1,18 +1,30 @@
 "use client"
-
+import { useState, useEffect } from "react"
 import { FiAward } from "react-icons/fi"
 
 export function AwardsComponent() {
+  const [scrollY, setScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const awards = [
     {
-      title: "RECOGNITION award in the Research Excellence (Teaching Faculty-National) category",
+      title: "RECOGNITION award in the Research Excellence",
+      category: "(Teaching Faculty-National)",
       recipient: "Sangharatna Godboley",
       organization: "Institution of Engineers (India) [IEI]",
       awardName: "IEI NMLC FCRIT Excellence Awards 2023",
       year: 2023
     },
     {
-      title: "Runner Up award in the Academic Excellence (Teaching Faculty-National) category",
+      title: "Runner Up award in the Academic Excellence",
+      category: "(Teaching Faculty-National)",
       recipient: "Sangharatna Godboley",
       organization: "Institution of Engineers (India) [IEI]",
       awardName: "IEI NMLC FCRIT Excellence Awards 2024",
@@ -20,84 +32,78 @@ export function AwardsComponent() {
     }
   ]
 
-  const AwardCard = ({ award }) => (
-    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-8 hover:shadow-xl transition-shadow">
-      <div className="flex items-start gap-4">
-        <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex-shrink-0">
-          <FiAward size={28} className="text-blue-600 dark:text-blue-400" />
-        </div>
-        <div className="flex-1">
-          <h3 className="text-xl font-black text-black dark:text-white mb-3 leading-tight" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-            {award.title}
-          </h3>
-          <p className="text-gray-700 dark:text-gray-300 mb-3 font-medium">
-            <span className="font-bold text-gray-600 dark:text-gray-400">Recipient:</span>{" "}
-            <span className="font-semibold">{award.recipient}</span>
-          </p>
-          <p className="text-gray-700 dark:text-gray-300 mb-2 font-bold">
-            {award.awardName}
-          </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
-            {award.organization} • <span className="font-bold">{award.year}</span>
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-
   return (
-    <>
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
-      `}</style>
+    <div className="bg-[#0A0A0A] w-full select-none" style={{ fontFamily: "'League Spartan', sans-serif" }}>
       
-      <section className="w-full py-16 md:py-24 bg-gradient-to-b from-slate-50 to-white dark:from-zinc-950 dark:to-black" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header */}
-          <div className="text-center mb-16">
-            <h1 className="text-4xl md:text-5xl font-black mb-4 text-black dark:text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-              Our <span className="text-blue-600 dark:text-blue-400">Achievements</span>
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto font-medium">
-              Recognition and awards that celebrate our commitment to excellence
-            </p>
-          </div>
-
-          <div className="space-y-6 mb-16">
-            {awards.map((award, index) => (
-              <AwardCard key={index} award={award} />
-            ))}
-          </div>
-
-          {/* Stats Section */}
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center p-8 bg-white dark:bg-zinc-900 rounded-2xl hover:shadow-lg transition-shadow">
-              <p className="text-5xl font-black text-blue-600 dark:text-blue-400 mb-3" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                2+
-              </p>
-              <p className="text-gray-700 dark:text-gray-300 font-bold">
-                Major Awards Received
-              </p>
+      {/* --- LAYER: AWARDS --- */}
+      <section className="relative min-h-screen lg:h-screen sticky top-0 overflow-hidden z-30 bg-[#F5F1FF] dark:bg-[#0A0A0A] shadow-[0_-50px_100px_rgba(0,0,0,0.4)] flex items-center justify-center py-20 lg:py-0">
+        <div 
+          className="w-full flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 transition-all duration-700 ease-out"
+          style={{ 
+            // Scaling logic for desktop; softened for mobile to prevent layout breaks
+            transform: typeof window !== 'undefined' && window.innerWidth > 1024 
+              ? `scale(${scrollY > 4200 ? 0.85 : 1})` 
+              : 'none',
+            opacity: scrollY > 4800 ? 0 : 1 
+          }}
+        >
+          <div className="max-w-7xl mx-auto w-full">
+            {/* Header */}
+            <div className="text-center mb-10 lg:mb-16">
+              <span className="inline-block px-3 py-1 lg:px-4 lg:py-1.5 mb-4 lg:mb-6 text-[10px] lg:text-xs font-black tracking-[0.2em] lg:tracking-[0.3em] text-indigo-600 bg-indigo-100 dark:bg-indigo-900/40 rounded-full uppercase">
+                Excellence Recognized
+              </span>
+              <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black text-[#3F3351] dark:text-white tracking-tighter uppercase mb-4 leading-[0.9]">
+                Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Achievements.</span>
+              </h1>
             </div>
-            <div className="text-center p-8 bg-white dark:bg-zinc-900 rounded-2xl hover:shadow-lg transition-shadow">
-              <p className="text-5xl font-black text-blue-600 dark:text-blue-400 mb-3" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                National
-              </p>
-              <p className="text-gray-700 dark:text-gray-300 font-bold">
-                Level Recognition
-              </p>
+
+            {/* Awards Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-8 mb-10 lg:mb-16">
+              {awards.map((award, index) => (
+                <div 
+                  key={index}
+                  className="group relative p-6 lg:p-8 bg-white dark:bg-zinc-900/50 backdrop-blur-xl border-l-4 lg:border-l-8 border-indigo-600 rounded-[20px] lg:rounded-[30px] shadow-xl lg:shadow-2xl transition-all duration-500"
+                >
+                  <div className="flex flex-col sm:flex-row items-start gap-4 lg:gap-6">
+                    <div className="w-12 h-12 lg:w-16 lg:h-16 bg-indigo-600 rounded-xl lg:rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/30 group-hover:rotate-12 transition-transform">
+                      <FiAward size={24} className="text-white lg:hidden" />
+                      <FiAward size={32} className="text-white hidden lg:block" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg lg:text-2xl font-black text-[#3F3351] dark:text-white leading-tight uppercase mb-2 lg:mb-4">
+                        {award.title} <span className="text-indigo-600/60 block sm:inline">{award.category}</span>
+                      </h3>
+                      <div className="space-y-1">
+                         <p className="text-indigo-600 dark:text-indigo-400 font-black text-xs lg:text-sm uppercase tracking-widest">{award.recipient}</p>
+                         <p className="text-gray-500 dark:text-gray-400 font-bold italic text-xs lg:text-base">{award.awardName}</p>
+                         <p className="text-[10px] lg:text-xs text-gray-400 font-black uppercase tracking-tighter">{award.organization} • {award.year}</p>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Decorative Glow - Hidden on small screens for performance */}
+                  <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl hidden lg:block group-hover:bg-indigo-500/10 transition-colors"></div>
+                </div>
+              ))}
             </div>
-            <div className="text-center p-8 bg-white dark:bg-zinc-900 rounded-2xl hover:shadow-lg transition-shadow">
-              <p className="text-5xl font-black text-blue-600 dark:text-blue-400 mb-3" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                IEI
-              </p>
-              <p className="text-gray-700 dark:text-gray-300 font-bold">
-                Prestigious Organization
-              </p>
+
+            {/* Quick Stats Summary */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+              {[
+                { label: "Awards", val: "2+" },
+                { label: "Level", val: "National" },
+                { label: "Authority", val: "IEI India" },
+                { label: "Standard", val: "Excellence" }
+              ].map((stat, i) => (
+                <div key={i} className="p-4 lg:p-6 bg-white/40 dark:bg-white/5 border border-white/20 dark:border-white/10 rounded-xl lg:rounded-2xl text-center backdrop-blur-sm">
+                  <p className="text-lg lg:text-2xl font-black text-[#3F3351] dark:text-white leading-none mb-1">{stat.val}</p>
+                  <p className="text-[8px] lg:text-[10px] font-black text-indigo-600 uppercase tracking-widest">{stat.label}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
-    </>
+    </div>
   )
 }

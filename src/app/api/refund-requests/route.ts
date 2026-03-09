@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import  { RefundRequest } from '@/models/RefundRequest';
 
 export async function GET(request: NextRequest) {
   try {
-    const token = await getToken({ req: request });
+    const session = await getServerSession(authOptions);
 
-    if (!token || !token.email) {
+    if (!session?.user?.email) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -19,14 +20,30 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
 
+    console.log('[Refund-Requests API] Session info:', {
+      email: session.user.email,
+      userRole: session.user.role,
+      paramRole: role,
+      isAdmin: session.user.role === 'admin',
+    });
+
     await dbConnect();
 
     let query: any = {};
 
     // Filter by role
-    if (token.role !== 'admin' && role === 'user') {
-      query.userEmail = token.email;
+    if (session.user.role !== 'admin' && role === 'user') {
+      // User can only see their own refund requests
+      // Search by both userEmail and userId for backward compatibility
+      query.$or = [
+        { userEmail: session.user.email },
+        { userId: session.user.id }
+      ];
     }
+    // If admin, query stays empty {} to return all requests
+    // If user but role param is 'admin', query also stays empty (fallback behavior)
+
+    console.log('[Refund-Requests API] Query:', query);
 
     const skip = (page - 1) * limit;
 
@@ -58,6 +75,14 @@ export async function GET(request: NextRequest) {
 
     const total = await RefundRequest.countDocuments(query);
 
+    console.log('[Refund-Requests API] Results:', {
+      queryFilter: query,
+      found: refundRequests.length,
+      total: total,
+      page: page,
+      limit: limit,
+    });
+
     return NextResponse.json({
       data: enrichedRequests,
       pagination: {
@@ -78,11 +103,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const token = await getToken({ req: request });
+    const session = await getServerSession(authOptions);
 
-    if (!token || !token.email) {
+    if (!session?.user?.email || !session?.user?.id) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized - Invalid session' },
         { status: 401 }
       );
     }
@@ -100,7 +125,8 @@ export async function POST(request: NextRequest) {
     await dbConnect();
 
     const refundRequest = new RefundRequest({
-      userEmail: token.email,
+      userId: session.user.id,
+      userEmail: session.user.email,
       paymentId,
       amount,
       reason,

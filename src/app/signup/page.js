@@ -53,8 +53,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50 font-sans dark:bg-black">
-      <Header />
+    <div className="flex flex-col bg-zinc-50 font-sans dark:bg-black">
       <SignupComponent />
     </div>
   );

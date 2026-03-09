@@ -1,4 +1,5 @@
-import { getToken } from 'next-auth/jwt';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import { Payment } from '@/models/Payment';
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,9 +11,9 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function GET(req: NextRequest) {
   try {
-    const token = await getToken({ req });
+    const session = await getServerSession(authOptions);
 
-    if (!token?.email) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build query - always filter by user's email
-    const query: any = { userEmail: token.email };
+    const query: any = { userEmail: session.user.email };
 
     // Optionally filter by status
     if (status) {
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
     const total = await Payment.countDocuments(query);
     const totalPages = Math.ceil(total / limit);
 
-    console.log(`📋 Fetched ${payments.length} payments for user: ${token.email}`);
+    console.log(`📋 Fetched ${payments.length} payments for user: ${session.user.email}`);
 
     return NextResponse.json({
       data: payments,

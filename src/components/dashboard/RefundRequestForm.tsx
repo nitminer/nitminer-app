@@ -207,7 +207,7 @@ export default function RefundRequestForm({ onSuccess }: { onSuccess?: () => voi
                 <option value="">-- Select a payment --</option>
                 {payments.map((payment) => (
                   <option key={payment._id} value={payment._id}>
-                    {payment.planName} - ₹{(payment.amount / 100).toLocaleString()} (
+                    {payment.planName || 'Plan'} - ₹{(payment.amount / 100).toLocaleString()} (
                     {new Date(payment.createdAt).toLocaleDateString()})
                   </option>
                 ))}

@@ -80,7 +80,7 @@ export function TrustInnComponent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-16 animate-fadeIn">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-black dark:text-white">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 text-black dark:text-white">
             About TrustInn Tool
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">

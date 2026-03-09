@@ -118,13 +118,13 @@ export function GalleryComponent() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
       `}</style>
 
-      <section className="w-full bg-gradient-to-b from-slate-50 to-white dark:from-zinc-950 dark:to-black" style={{ fontFamily: 'Inter, system-ui, sans-serif' }} suppressHydrationWarning>
+      <section className="w-full bg-gradient-to-b from-slate-50 to-white" style={{ fontFamily: 'Inter, system-ui, sans-serif' }} suppressHydrationWarning>
         <Header/>
         
         {/* Hero Section */}
         <div className="py-16 md:py-24 bg-blue-600 text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h1 className="text-4xl md:text-5xl font-black mb-6" style={{ fontFamily: 'Space Grotesk, sans-serif' }} suppressHydrationWarning>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black mb-6" style={{ fontFamily: 'Space Grotesk, sans-serif' }} suppressHydrationWarning>
               Our Gallery
             </h1>
             <p className="text-xl text-white/90 max-w-2xl mx-auto font-medium">
@@ -140,7 +140,7 @@ export function GalleryComponent() {
               <div
                 key={image.id}
                 onClick={() => openLightbox(index)}
-                className="group cursor-pointer overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 bg-gray-200 dark:bg-zinc-800"
+                className="group cursor-pointer overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 bg-gray-200"
               >
                 <div className="relative h-64 overflow-hidden">
                   <img
@@ -150,7 +150,7 @@ export function GalleryComponent() {
                     loading="lazy"
                     onError={(e) => {
                       e.target.style.display = 'none';
-                      e.target.parentElement.innerHTML = '<div class="flex items-center justify-center h-full bg-gray-300 dark:bg-zinc-700"><span class="text-gray-500 dark:text-gray-400 font-bold">Image not available</span></div>';
+                      e.target.parentElement.innerHTML = '<div class="flex items-center justify-center h-full bg-gray-300"><span class="text-gray-500 font-bold">Image not available</span></div>';
                     }}
                   />
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-all duration-300 flex items-center justify-center">

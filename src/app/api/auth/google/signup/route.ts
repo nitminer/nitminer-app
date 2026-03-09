@@ -21,12 +21,18 @@ export async function POST(req: NextRequest) {
     const body: GoogleSignupRequestBody = await req.json();
     const { idToken } = body;
 
+    console.log('[GOOGLE-SIGNUP-API] Received request');
+
     if (!idToken) {
+      console.error('[GOOGLE-SIGNUP-API] No ID token provided');
       return NextResponse.json(
         { error: 'ID token is required' },
         { status: 400 }
       );
     }
+
+    console.log('[GOOGLE-SIGNUP-API] Verifying Google token...');
+    console.log('[GOOGLE-SIGNUP-API] Client ID:', process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
 
     // Initialize Google OAuth2 client
     const client = new OAuth2Client(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
@@ -38,21 +44,25 @@ export async function POST(req: NextRequest) {
         idToken,
         audience: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
       });
+      console.log('[GOOGLE-SIGNUP-API] Token verified successfully');
     } catch (tokenError) {
-      console.error('Google token verification error:', tokenError);
+      console.error('[GOOGLE-SIGNUP-API] Google token verification error:', tokenError);
       return NextResponse.json(
-        { error: 'Invalid Google token' },
+        { error: 'Invalid Google token', details: tokenError instanceof Error ? tokenError.message : String(tokenError) },
         { status: 401 }
       );
     }
 
     const payload = ticket.getPayload();
     if (!payload || !payload.email) {
+      console.error('[GOOGLE-SIGNUP-API] Invalid token payload:', payload);
       return NextResponse.json(
         { error: 'Invalid token payload' },
         { status: 401 }
       );
     }
+
+    console.log('[GOOGLE-SIGNUP-API] Google user email:', payload.email);
 
     await dbConnect();
 
@@ -65,17 +75,21 @@ export async function POST(req: NextRequest) {
     });
 
     if (existingUser) {
+      console.log('[GOOGLE-SIGNUP-API] User already exists:', payload.email);
       return NextResponse.json(
         { error: 'Email already registered. Please log in instead.' },
         { status: 409 }
       );
     }
 
+    console.log('[GOOGLE-SIGNUP-API] Creating new user...');
+
     // Create new user with Google data
     const user = new User({
       firstName: payload.given_name || payload.name?.split(' ')[0] || 'Google',
       lastName: payload.family_name || payload.name?.split(' ').slice(1).join(' ') || 'User',
       email: payload.email.toLowerCase(),
+      phone: '+1-000-000-0000', // Default phone for Google users
       googleId: payload.sub,
       role: 'user',
       trialCount: 5,
@@ -94,6 +108,7 @@ export async function POST(req: NextRequest) {
     });
 
     await user.save();
+    console.log('[GOOGLE-SIGNUP-API] User created:', user._id);
 
     // Generate JWT tokens
     const accessToken = jwt.sign(
@@ -117,6 +132,8 @@ export async function POST(req: NextRequest) {
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' }
     );
+
+    console.log('[GOOGLE-SIGNUP-API] Tokens generated, returning response');
 
     // Set secure httpOnly cookies
     const response = NextResponse.json(
@@ -151,9 +168,12 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error('Google signup error:', error);
+    console.error('[GOOGLE-SIGNUP-API] Error:', error);
     return NextResponse.json(
-      { error: 'Failed to signup with Google' },
+      { 
+        error: 'Failed to signup with Google',
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }

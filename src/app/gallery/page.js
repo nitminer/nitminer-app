@@ -1,4 +1,6 @@
+import { Suspense } from "react"
 import { GalleryComponent } from "@/components/GalleryComponent"
+import { GallerySkeleton } from "@/components/LoadingSkeletons"
 
 export const metadata = {
   title: "Gallery - NITMiner Technologies",
@@ -6,5 +8,9 @@ export const metadata = {
 }
 
 export default function GalleryPage() {
-  return <GalleryComponent />
+  return (
+    <Suspense fallback={<GallerySkeleton />}>
+      <GalleryComponent />
+    </Suspense>
+  )
 }

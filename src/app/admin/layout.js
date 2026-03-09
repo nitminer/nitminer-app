@@ -1,12 +1,25 @@
-export const metadata = {
-  title: 'Admin - NIT Miner',
-  description: 'Admin Dashboard'
-};
+'use client';
+
+import { Providers } from "@/components/providers";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function AdminLayout({ children }) {
   return (
-    <div>
+    <Providers>
       {children}
-    </div>
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+      />
+    </Providers>
   );
 }

@@ -73,28 +73,28 @@ export default function SettingsTab() {
   };
 
   if (loading) {
-    return <div className="text-white">Loading settings...</div>;
+    return <div className="text-gray-900 dark:text-white">Loading settings...</div>;
   }
 
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-3">
-        <Settings className="w-6 h-6 text-blue-500" />
-        <h2 className="text-2xl font-bold text-white">Settings</h2>
+        <Settings className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h2>
       </div>
 
       {/* Account Settings */}
-      <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700">
         <div className="flex items-center gap-3 mb-6">
-          <User className="w-5 h-5 text-blue-500" />
-          <h3 className="text-lg font-semibold text-white">Account Settings</h3>
+          <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Account Settings</h3>
         </div>
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <label className="text-white font-medium">Two-Factor Authentication</label>
-              <p className="text-slate-400 text-sm">Add an extra layer of security to your account</p>
+              <label className="text-gray-900 dark:text-white font-medium">Two-Factor Authentication</label>
+              <p className="text-gray-600 dark:text-slate-400 text-sm">Add an extra layer of security to your account</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -103,19 +103,19 @@ export default function SettingsTab() {
                 onChange={(e) => handleSettingChange('twoFactorAuth', e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-gray-300 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
 
           <div className="flex items-center justify-between">
             <div>
-              <label className="text-white font-medium">Language</label>
-              <p className="text-slate-400 text-sm">Choose your preferred language</p>
+              <label className="text-gray-900 dark:text-white font-medium">Language</label>
+              <p className="text-gray-600 dark:text-slate-400 text-sm">Choose your preferred language</p>
             </div>
             <select
               value={settings.language}
               onChange={(e) => handleSettingChange('language', e.target.value)}
-              className="bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-900 dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="en">English</option>
               <option value="es">Spanish</option>
@@ -126,13 +126,13 @@ export default function SettingsTab() {
 
           <div className="flex items-center justify-between">
             <div>
-              <label className="text-white font-medium">Timezone</label>
-              <p className="text-slate-400 text-sm">Set your local timezone</p>
+              <label className="text-gray-900 dark:text-white font-medium">Timezone</label>
+              <p className="text-gray-600 dark:text-slate-400 text-sm">Set your local timezone</p>
             </div>
             <select
               value={settings.timezone}
               onChange={(e) => handleSettingChange('timezone', e.target.value)}
-              className="bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-900 dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="UTC">UTC</option>
               <option value="EST">Eastern Time</option>
@@ -144,17 +144,17 @@ export default function SettingsTab() {
       </div>
 
       {/* Notification Settings */}
-      <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700">
         <div className="flex items-center gap-3 mb-6">
-          <Bell className="w-5 h-5 text-blue-500" />
-          <h3 className="text-lg font-semibold text-white">Notifications</h3>
+          <Bell className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h3>
         </div>
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <label className="text-white font-medium">Email Notifications</label>
-              <p className="text-slate-400 text-sm">Receive notifications via email</p>
+              <label className="text-gray-900 dark:text-white font-medium">Email Notifications</label>
+              <p className="text-gray-600 dark:text-slate-400 text-sm">Receive notifications via email</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -163,14 +163,14 @@ export default function SettingsTab() {
                 onChange={(e) => handleSettingChange('emailNotifications', e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-gray-300 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
 
           <div className="flex items-center justify-between">
             <div>
-              <label className="text-white font-medium">Push Notifications</label>
-              <p className="text-slate-400 text-sm">Receive push notifications in your browser</p>
+              <label className="text-gray-900 dark:text-white font-medium">Push Notifications</label>
+              <p className="text-gray-600 dark:text-slate-400 text-sm">Receive push notifications in your browser</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -179,14 +179,14 @@ export default function SettingsTab() {
                 onChange={(e) => handleSettingChange('pushNotifications', e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-gray-300 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
 
           <div className="flex items-center justify-between">
             <div>
-              <label className="text-white font-medium">Marketing Emails</label>
-              <p className="text-slate-400 text-sm">Receive emails about new features and promotions</p>
+              <label className="text-gray-900 dark:text-white font-medium">Marketing Emails</label>
+              <p className="text-gray-600 dark:text-slate-400 text-sm">Receive emails about new features and promotions</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -195,29 +195,29 @@ export default function SettingsTab() {
                 onChange={(e) => handleSettingChange('marketingEmails', e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-gray-300 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
           </div>
         </div>
       </div>
 
       {/* Appearance Settings */}
-      <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700">
         <div className="flex items-center gap-3 mb-6">
-          <Palette className="w-5 h-5 text-blue-500" />
-          <h3 className="text-lg font-semibold text-white">Appearance</h3>
+          <Palette className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Appearance</h3>
         </div>
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <label className="text-white font-medium">Theme</label>
-              <p className="text-slate-400 text-sm">Choose your preferred theme</p>
+              <label className="text-gray-900 dark:text-white font-medium">Theme</label>
+              <p className="text-gray-600 dark:text-slate-400 text-sm">Choose your preferred theme</p>
             </div>
             <select
               value={settings.theme}
               onChange={(e) => handleSettingChange('theme', e.target.value)}
-              className="bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="bg-gray-50 dark:bg-slate-700 border border-gray-300 dark:border-slate-600 text-gray-900 dark:text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="dark">Dark</option>
               <option value="light">Light</option>
@@ -228,20 +228,20 @@ export default function SettingsTab() {
       </div>
 
       {/* Security Settings */}
-      <div className="bg-slate-800 rounded-lg p-6 border border-slate-700">
+      <div className="bg-white dark:bg-slate-800 rounded-lg p-6 border border-gray-200 dark:border-slate-700">
         <div className="flex items-center gap-3 mb-6">
-          <Shield className="w-5 h-5 text-blue-500" />
-          <h3 className="text-lg font-semibold text-white">Security</h3>
+          <Shield className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Security</h3>
         </div>
 
         <div className="space-y-4">
-          <button className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg transition-colors">
+          <button className="bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-900 dark:text-white px-4 py-2 rounded-lg transition-colors">
             Change Password
           </button>
-          <button className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg transition-colors ml-4">
+          <button className="bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-900 dark:text-white px-4 py-2 rounded-lg transition-colors ml-4">
             Download Account Data
           </button>
-          <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors ml-4">
+          <button className="bg-red-100 hover:bg-red-200 dark:bg-red-600 dark:hover:bg-red-700 text-red-600 dark:text-white px-4 py-2 rounded-lg transition-colors ml-4">
             Delete Account
           </button>
         </div>
@@ -250,7 +250,7 @@ export default function SettingsTab() {
       {/* Save Button */}
       <div className="flex justify-end gap-4">
         {saveSuccess && (
-          <div className="bg-green-900 border border-green-700 text-green-200 px-4 py-3 rounded-lg">
+          <div className="bg-green-100 dark:bg-green-900 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-200 px-4 py-3 rounded-lg">
             ✓ Settings saved successfully
           </div>
         )}

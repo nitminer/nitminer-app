@@ -9,8 +9,13 @@ export async function GET(req: NextRequest) {
       secret: process.env.NEXTAUTH_SECRET 
     });
 
+    // If no NextAuth token, check for custom nitminer session header
     if (!token?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      const nitminerSession = req.headers.get('x-nitminer-session');
+      if (!nitminerSession) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      // Custom session exists, allow it
     }
 
     // For now, return 0 notifications

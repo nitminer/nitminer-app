@@ -11,7 +11,7 @@ export function AboutUsDropdown() {
     <div className="relative group">
       
       <button
-        className="flex items-center font-bold gap-1 text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white transition-colors"
+        className="flex items-center font-bold gap-1 text-gray-700 hover:text-black transition-colors"
         onMouseEnter={() => setIsOpen(true)}
         onMouseLeave={() => setIsOpen(false)}
         style={{ fontFamily: 'var(--font-space-grotesk), sans-serif' }}
@@ -22,42 +22,49 @@ export function AboutUsDropdown() {
 
       {isOpen && (
         <div
-          className="absolute left-0 mt-0 w-48 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-2 z-50"
+          className="absolute left-0 mt-0 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50"
           onMouseEnter={() => setIsOpen(true)}
           onMouseLeave={() => setIsOpen(false)}
         >
           <Link
+            href="/about-us"
+            className="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-black transition-colors font-bold text-blue-600"
+            style={{ fontFamily: 'var(--font-space-grotesk), sans-serif' }}
+          >
+            About Us
+          </Link>
+          <Link
             href="/team"
-            className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-black dark:hover:text-white transition-colors"
+            className="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-black transition-colors"
             style={{ fontFamily: 'var(--font-space-grotesk), sans-serif' }}
           >
             Our Team
           </Link>
           <Link
             href="/awards"
-            className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-black dark:hover:text-white transition-colors"
+            className="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-black transition-colors"
             style={{ fontFamily: 'var(--font-space-grotesk), sans-serif' }}
           >
             Awards
           </Link>
           <Link
             href="/publications"
-            className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-black dark:hover:text-white transition-colors"
+            className="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-black transition-colors"
             style={{ fontFamily: 'var(--font-space-grotesk), sans-serif' }}
           >
             Publications
           </Link>
            <Link
             href="/pricing"
-            className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-black dark:hover:text-white transition-colors"
+            className="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-black transition-colors"
             style={{ fontFamily: 'var(--font-space-grotesk), sans-serif' }}
           >
             Pricing
           </Link>
-          <hr className="my-2 border-gray-200 dark:border-gray-700" />
+          <hr className="my-2 border-gray-200" />
           <Link
             href="/downloads"
-            className="block px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-black dark:hover:text-white transition-colors font-bold text-blue-600 dark:text-blue-400"
+            className="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-black transition-colors font-bold text-blue-600"
             style={{ fontFamily: 'var(--font-space-grotesk), sans-serif' }}
           >
             📥 Download App

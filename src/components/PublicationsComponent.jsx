@@ -1,207 +1,133 @@
 "use client"
+import { useState, useEffect, useRef } from "react"
+import { FiExternalLink, FiNavigation } from "react-icons/fi"
 
-import { FiExternalLink, FiBook } from "react-icons/fi"
+export default function PublicationsComponent() {
+  const [activeStation, setActiveStation] = useState(0);
+  const scrollContainerRef = useRef(null);
 
-export function PublicationsComponent() {
   const publications = [
-    {
-      authors: "Sangharatna Godboley, P Radha Krishna, Sunkara Sri Harika, Pooja Varnam",
-      title: "Validation Framework for E-Contract and Smart Contract",
-      conference: "29th International Conference on Evaluation and Assessment in Software Engineering (EASE), ACM, Istanbul, Turkey, June 2025",
-      category: "Core A",
-      year: 2025,
-      link: "#"
-    },
-    {
-      authors: "Monika Rani Golla, Sangharatna Godboley",
-      title: "Poster: Empirical Evaluation of SC-MCC Meta Program Efficiency using Dynamic Symbolic Execution Engine",
-      conference: "18th IEEE Conference on Software Testing, Verification and Validation (ICST 2025), Naples, Italy, 31 March-04 April 2025",
-      category: "Core A",
-      year: 2025,
-      link: "#"
-    },
-    {
-      authors: "Monika Rani Golla, Sangharatna Godboley, Avijit Das, P. Radha Krishna",
-      title: "Poster: Reporting Unique-Cause MC/DC Score using Formal Verification",
-      conference: "18th IEEE Conference on Software Testing, Verification and Validation (ICST 2025), Naples, Italy, 31 March-04 April 2025",
-      category: "Core A",
-      year: 2025,
-      link: "#"
-    },
-    {
-      authors: "Monika Rani Golla, Sangharatna Godboley",
-      title: "Automated SC-MCC Test Case Generation using Coverage Guided Fuzzing",
-      conference: "18th IEEE Conference on Software Testing, Verification and Validation (ICST 2025), Naples, Italy, Journal First Track",
-      category: "Core A",
-      year: 2025,
-      link: "#"
-    },
-    {
-      authors: "Sangharatna Godboley, P. Radha Krishna",
-      title: "Sol-Repairer: Solidity Smart Contract Dead Code Repairer",
-      conference: "In Proceedings of the 18th Innovations in Software Engineering Conference (ISEC '25), Kurukshetra, India",
-      category: "Conference",
-      year: 2025,
-      link: "#"
-    },
-    {
-      authors: "Wei, C., Wu, T., Sa Menezes, R., Shmarov, F., Aljaafari, F., Godboley, S., Alshmrany, K., de Freitas, R., & Cordeiro, L. C.",
-      title: "ESBMC v7.7: Automating Branch Coverage Analysis Using CFG-Based Instrumentation and SMT Solving (Competition Contribution)",
-      conference: "In 28th International Conference on Fundamental Approaches to Software Engineering",
-      category: "Core B",
-      year: 2024,
-      link: "#"
-    },
-    {
-      authors: "Sangharatna Godboley, P. Radha Krishna",
-      title: "VeriSol-MCE: Verification-Based Condition Coverage Analysis of Smart Contracts Using Model Checker Engines",
-      conference: "17th IEEE Conference on Software Testing, Verification and Validation (ICST 2024) Pages 434-438, Toronto, Canada 27-31 May 2024",
-      category: "Core A",
-      year: 2024,
-      link: "#"
-    },
-    {
-      authors: "Darshan Lohiya, Monika Rani Golla, Sangharatna Godboley, P. Radha Krishna",
-      title: "gptCombFuzz: Combinatorial Oriented LLM Seed Generation for Effective Fuzzing",
-      conference: "17th IEEE Conference on Software Testing, Verification and Validation (ICST 2024) Pages 438-442, Toronto, Canada 27-31 May 2024",
-      category: "Core A",
-      year: 2024,
-      link: "#"
-    },
-    {
-      authors: "Golla Monika Rani, Sangharatna Godboley, Joxan Jaffar, Rasool Maghareh",
-      title: "Poster: SC-MCC Test Case Generation using Dynamic Symbolic Execution Engines",
-      conference: "4th KLEE Workshop, 46th International Conference on Software Engineering (ICSE 2024), 14-20 April 2024, Lisbon, Portugal",
-      category: "Core A*",
-      year: 2024,
-      link: "#"
-    },
-    {
-      authors: "Kanika Gupta, Sangharatna Godboley",
-      title: "Poster: Towards Complete Fuzzing with KLEE",
-      conference: "4th KLEE Workshop, 46th International Conference on Software Engineering (ICSE 2024), 14-20 April 2024, Lisbon, Portugal",
-      category: "Core A*",
-      year: 2024,
-      link: "#"
-    }
-  ]
+    { authors: "Sangharatna Godboley, P Radha Krishna, et al.", title: "Validation Framework for E-Contract and Smart Contract", conference: "EASE, ACM, Istanbul, June 2025", category: "Core A", year: 2025 },
+    { authors: "Monika Rani Golla, Sangharatna Godboley", title: "SC-MCC Meta Program Efficiency using Dynamic Symbolic Execution", conference: "IEEE ICST 2025, Naples, Italy", category: "Core A", year: 2025 },
+    { authors: "Monika Rani Golla, Sangharatna Godboley, et al.", title: "Reporting Unique-Cause MC/DC Score using Formal Verification", conference: "IEEE ICST 2025, Italy", category: "Core A", year: 2025 },
+    { authors: "Monika Rani Golla, Sangharatna Godboley", title: "Automated SC-MCC Test Case Generation using Fuzzing", conference: "IEEE ICST 2025, Journal First", category: "Core A", year: 2025 },
+    { authors: "Wei, C., Wu, T., Godboley, S., et al.", title: "ESBMC v7.7: Automating Branch Coverage Analysis", conference: "FASE, 2024", category: "Core B", year: 2024 },
+    { authors: "Sangharatna Godboley, P. Radha Krishna", title: "VeriSol-MCE: Condition Coverage Analysis of Smart Contracts", conference: "IEEE ICST 2024, Toronto", category: "Core A", year: 2024 }
+  ];
 
-  const getCategoryColor = (category) => {
-    switch (category) {
-      case "Core A*":
-        return "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200"
-      case "Core A":
-        return "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200"
-      case "Core B":
-        return "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200"
-      case "Conference":
-        return "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200"
-      default:
-        return "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
-    }
-  }
+  useEffect(() => {
+    const observerOptions = {
+      root: scrollContainerRef.current,
+      rootMargin: '-45% 0px -45% 0px', 
+      threshold: 0
+    };
 
-  const PublicationCard = ({ pub }) => (
-    <div className="bg-white dark:bg-zinc-900 rounded-2xl p-8 hover:shadow-xl transition-shadow">
-      <div className="flex items-start gap-3 mb-4">
-        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex-shrink-0">
-          <FiBook className="text-blue-600 dark:text-blue-400" size={20} />
-        </div>
-        <span className={`px-3 py-1.5 rounded-lg text-sm font-bold ${getCategoryColor(pub.category)}`}>
-          {pub.category}
-        </span>
-      </div>
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const index = parseInt(entry.target.getAttribute('data-index'));
+          setActiveStation(index);
+        }
+      });
+    }, observerOptions);
 
-      <h3 className="text-xl font-black text-black dark:text-white mb-3 leading-tight" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-        {pub.title}
-      </h3>
+    const stations = document.querySelectorAll('.internal-station');
+    stations.forEach((station) => observer.observe(station));
 
-      <p className="text-gray-700 dark:text-gray-300 mb-2 text-sm font-medium">
-        <span className="font-bold text-gray-600 dark:text-gray-400">Authors:</span> {pub.authors}
-      </p>
+    return () => observer.disconnect();
+  }, []);
 
-      <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm font-medium">
-        {pub.conference}
-      </p>
-
-      <div className="flex items-center justify-between pt-4">
-        <span className="text-gray-500 dark:text-gray-500 text-sm font-bold">
-          {pub.year}
-        </span>
-        <a
-          href={pub.link}
-          className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-bold transition-colors"
-          style={{ fontFamily: 'Space Grotesk, sans-serif' }}
-        >
-          View Publication
-          <FiExternalLink size={16} />
-        </a>
-      </div>
-    </div>
-  )
+  // Road height calculation logic
+  const getRoadHeight = () => {
+    // If we're at the first station, the line should exist but be at the very top node
+    const totalGap = publications.length - 1;
+    const progress = (activeStation / totalGap) * 100;
+    return `${progress}%`;
+  };
 
   return (
-    <>
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
-      `}</style>
+    <div className="w-full mt-15 bg-[#F5F1FF] dark:bg-[#0A0A0A] py-16 px-4 select-none" style={{ fontFamily: "'League Spartan', sans-serif" }}>
       
-      <section className="w-full py-16 md:py-24 bg-gradient-to-b from-slate-50 to-white dark:from-zinc-950 dark:to-black" style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header */}
-          <div className="text-center mb-16">
-            <h1 className="text-4xl md:text-5xl font-black mb-4 text-black dark:text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-              Our <span className="text-blue-600 dark:text-blue-400">Publications</span>
-            </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto font-medium">
-              Peer-reviewed publications and research contributions
-            </p>
+      <div className="max-w-7xl mx-auto mb-12 text-center">
+        <h1 className="text-4xl md:text-7xl font-black text-[#3F3351] dark:text-white tracking-tighter uppercase leading-none">
+          Our Research <br />
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Publications.</span>
+        </h1>
+        <p className="text-xs font-black uppercase text-gray-400 tracking-[0.4em] mt-4">Scientific Roadmap & Milestones</p>
+      </div>
+
+      <div 
+        ref={scrollContainerRef}
+        className="max-w-6xl mx-auto h-[75vh] bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-[60px] border border-white/20 dark:border-white/5 shadow-[0_20px_50px_rgba(0,0,0,0.1)] overflow-y-auto overflow-x-hidden relative custom-scrollbar p-6 lg:px-20"
+      >
+        {/* Container that determines the full scrollable height */}
+        <div className="relative pt-32 pb-48">
+          
+          {/* THE TRACK (BACKGROUND LINE) */}
+          <div className="absolute left-1/2 -translate-x-1/2 top-32 bottom-48 w-2 bg-gray-200 dark:bg-zinc-800 rounded-full">
+             {/* THE COVERED PATH (COLORED LINE) */}
+             <div 
+                className="w-full bg-gradient-to-b from-indigo-600 via-purple-600 to-pink-500 transition-all duration-1000 ease-out rounded-full origin-top"
+                style={{ height: getRoadHeight() }}
+             />
           </div>
 
-          {/* Publications Grid */}
-          <div className="space-y-6 mb-16">
-            {publications.map((pub, index) => (
-              <PublicationCard key={index} pub={pub} />
-            ))}
-          </div>
+          <div className="space-y-56 lg:space-y-72 relative z-10">
+            {publications.map((pub, index) => {
+              const isLeft = index % 2 === 0;
+              const isCurrent = activeStation === index;
 
-          {/* Stats */}
-          <div className="grid md:grid-cols-4 gap-8">
-            <div className="text-center p-8 bg-white dark:bg-zinc-900 rounded-2xl hover:shadow-lg transition-shadow">
-              <p className="text-5xl font-black text-blue-600 dark:text-blue-400 mb-3" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                10+
-              </p>
-              <p className="text-gray-700 dark:text-gray-300 font-bold">
-                Publications
-              </p>
-            </div>
-            <div className="text-center p-8 bg-white dark:bg-zinc-900 rounded-2xl hover:shadow-lg transition-shadow">
-              <p className="text-5xl font-black text-blue-600 dark:text-blue-400 mb-3" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                2024-25
-              </p>
-              <p className="text-gray-700 dark:text-gray-300 font-bold">
-                Recent Years
-              </p>
-            </div>
-            <div className="text-center p-8 bg-white dark:bg-zinc-900 rounded-2xl hover:shadow-lg transition-shadow">
-              <p className="text-5xl font-black text-blue-600 dark:text-blue-400 mb-3" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                Core A+
-              </p>
-              <p className="text-gray-700 dark:text-gray-300 font-bold">
-                Top Tier Venues
-              </p>
-            </div>
-            <div className="text-center p-8 bg-white dark:bg-zinc-900 rounded-2xl hover:shadow-lg transition-shadow">
-              <p className="text-5xl font-black text-blue-600 dark:text-blue-400 mb-3" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                50+
-              </p>
-              <p className="text-gray-700 dark:text-gray-300 font-bold">
-                Researchers Involved
-              </p>
-            </div>
+              return (
+                <div 
+                  key={index} 
+                  data-index={index}
+                  className="internal-station relative flex flex-col lg:flex-row items-center justify-center"
+                >
+                  {/* Content Wrappers */}
+                  <div className={`w-full lg:w-[45%] transition-all duration-700 ${isLeft ? 'lg:pr-16 opacity-100 translate-x-0' : 'opacity-0 pointer-events-none hidden lg:block'}`}>
+                    {isLeft && <PublicationCard pub={pub} isCurrent={isCurrent} />}
+                  </div>
+
+                  {/* CENTER NODE */}
+                  <div className="relative flex items-center justify-center shrink-0 h-10 w-10">
+                    <div className={`absolute w-6 h-6 rounded-full border-4 transition-all duration-500 z-20 ${isCurrent ? 'bg-white border-indigo-600 scale-125 shadow-[0_0_15px_rgba(79,70,229,0.6)]' : 'bg-gray-300 dark:bg-zinc-700 border-transparent'}`} />
+                    
+                    {/* BUS ICON */}
+                    <div className={`absolute transition-all mt-18 duration-700 z-30 pointer-events-none ${isCurrent ? 'opacity-100 -translate-y-12 scale-110' : 'opacity-0 -translate-y-8 scale-50'}`}>
+                       <FiNavigation size={32} className="rotate-140 text-indigo-600 drop-shadow-[0_0_10px_rgba(79,70,229,0.3)]" />
+                    </div>
+                  </div>
+
+                  <div className={`w-full lg:w-[45%] transition-all duration-700 ${!isLeft ? 'lg:pl-16 opacity-100 translate-x-0' : 'opacity-0 pointer-events-none hidden lg:block'}`}>
+                    {!isLeft && <PublicationCard pub={pub} isCurrent={isCurrent} />}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
-      </section>
-    </>
-  )
+      </div>
+    </div>
+  );
+}
+
+function PublicationCard({ pub, isCurrent }) {
+  return (
+    <div className={`transition-all duration-700 transform ${isCurrent ? 'scale-100 blur-none opacity-100 translate-y-0' : 'scale-90 blur-[3px] opacity-10 translate-y-4'}`}>
+      <div className="p-8 bg-white dark:bg-zinc-950 rounded-[40px] shadow-2xl border border-white/40 dark:border-zinc-800 relative overflow-hidden group hover:border-indigo-500/50">
+        <span className="absolute -top-6 -right-2 text-8xl font-black text-indigo-600/5 pointer-events-none">{pub.year}</span>
+        <div className="relative z-10">
+          <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full mb-4 inline-block ${isCurrent ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-400'}`}>
+            {pub.category}
+          </span>
+          <h3 className="text-xl lg:text-2xl font-black text-[#3F3351] dark:text-white uppercase leading-[0.9] mb-4">{pub.title}</h3>
+          <p className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-6 italic line-clamp-2">{pub.authors}</p>
+          <div className="flex items-center justify-between pt-6 border-t border-gray-100 dark:border-zinc-800/50">
+             <p className="text-[10px] font-black text-indigo-400 uppercase">{pub.conference}</p>
+             <FiExternalLink size={18} className="text-gray-400" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

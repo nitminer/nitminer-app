@@ -8,6 +8,7 @@ export interface IPayment extends Document {
   planDuration: '1_month' | '6_months' | '12_months'; // Plan duration mapping
   amount: number;
   paymentMethod: 'razorpay' | 'card' | 'upi';
+  paymentMode?: string; // Actual mode from Razorpay: 'upi', 'credit_card', 'debit_card', 'netbanking', 'wallet', etc.
   paymentId?: string; // Only set after payment verification
   orderId?: string;
   invoiceUrl?: string;
@@ -51,6 +52,10 @@ const paymentSchema = new Schema<IPayment>(
       type: String,
       enum: ['razorpay', 'card', 'upi'],
       required: true,
+    },
+    paymentMode: {
+      type: String,
+      default: null, // 'upi', 'credit_card', 'debit_card', 'netbanking', 'wallet', etc.
     },
     paymentId: {
       type: String,

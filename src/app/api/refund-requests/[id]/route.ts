@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import dbConnect from '@/lib/dbConnect';
 import { RefundRequest } from '@/models/RefundRequest';
 
@@ -8,16 +9,15 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const token = await getToken({ req: request });
+    const { id } = await params;
+    const session = await getServerSession(authOptions);
 
-    if (!token || !token.email) {
+    if (!session?.user?.email) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
-
-    const { id } = await params;
 
     await dbConnect();
 
@@ -31,7 +31,7 @@ export async function GET(
     }
 
     // Check access control
-    if (token.role !== 'admin' && refundRequest.userEmail !== token.email) {
+    if (session.user.role !== 'admin' && refundRequest.userEmail !== session.user.email) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
@@ -55,16 +55,16 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const token = await getToken({ req: request });
+    const { id } = await params;
+    const session = await getServerSession(authOptions);
 
-    if (!token || !token.email || token.role !== 'admin') {
+    if (!session?.user?.email || session.user.role !== 'admin') {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    const { id } = await params;
     const { status, adminNotes } = await request.json();
 
     if (!['pending', 'approved', 'rejected'].includes(status)) {

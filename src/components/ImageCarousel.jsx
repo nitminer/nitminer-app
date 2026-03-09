@@ -51,7 +51,7 @@ export function ImageCarousel() {
   }, [api])
 
   return (
-    <div className="w-full px-4 py-8 md:px-8 md:py-12">
+    <div className="w-full px-4 py-10 md:px-8 md:py-12">
       <Carousel
         setApi={setApi}
         className="w-full"
@@ -59,7 +59,7 @@ export function ImageCarousel() {
         <CarouselContent>
           {carouselImages.map((image, index) => (
             <CarouselItem key={index} className="relative">
-              <div className="relative w-full h-96 md:h-[600px] overflow-hidden rounded-lg group">
+              <div className="relative w-full h-96 md:h-[800px] overflow-hidden rounded-lg group">
                 {/* Image */}
                 <Image
                   src={image.src}

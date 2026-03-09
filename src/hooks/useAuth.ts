@@ -1,14 +1,25 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 
 export function useAuth() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { data: session, status, update: updateSession } = useSession();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasChecked, setHasChecked] = useState(false);
+  const sessionRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Refresh session periodically (especially important for mobile)
+  const refreshSession = useCallback(async () => {
+    try {
+      await updateSession();
+      console.log('[useAuth] Session refreshed');
+    } catch (error) {
+      console.warn('[useAuth] Session refresh failed:', error);
+    }
+  }, [updateSession]);
 
   useEffect(() => {
     // Check authentication status from NextAuth session
@@ -22,6 +33,12 @@ export function useAuth() {
       setUser(session.user);
       setHasChecked(true);
       setIsLoading(false);
+      
+      // Start periodic session refresh for mobile (every 5 minutes)
+      if (!sessionRefreshIntervalRef.current) {
+        sessionRefreshIntervalRef.current = setInterval(refreshSession, 5 * 60 * 1000);
+      }
+      
       return;
     }
 
@@ -56,7 +73,15 @@ export function useAuth() {
     setUser(null);
     setHasChecked(true);
     setIsLoading(false);
-  }, [status, session]);
+    
+    // Clear session refresh interval if authenticated
+    return () => {
+      if (sessionRefreshIntervalRef.current) {
+        clearInterval(sessionRefreshIntervalRef.current);
+        sessionRefreshIntervalRef.current = null;
+      }
+    };
+  }, [status, session, refreshSession]);
 
   const logout = () => {
     // Clear NextAuth session

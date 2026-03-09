@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { BarChart3, Clock, Zap, Calendar, Target } from 'lucide-react';
 
 interface UsageLog {
@@ -24,12 +25,14 @@ export default function UsageTab() {
   const [pagination, setPagination] = useState<PaginationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [redirecting, setRedirecting] = useState(false);
   const [userStats, setUserStats] = useState({
     totalExecutions: 0,
     thisMonth: 0,
     avgTime: 0,
     favoriteTool: 'None'
   });
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     fetchLogs();
@@ -110,6 +113,108 @@ export default function UsageTab() {
       avgTime,
       favoriteTool
     });
+  };
+
+  const handleTrustInnAccess = async () => {
+    // Check if session is still loading
+    if (status === 'loading') {
+      console.warn('Session is still loading, please wait...');
+      return;
+    }
+
+    // Check authentication status
+    if (!session) {
+      console.log('Authentication check failed - not logged in');
+      return;
+    }
+
+    try {
+      setRedirecting(true);
+
+      // Fetch user details to check premium status and trials
+      const response = await fetch('/api/user/me', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        console.error('Failed to fetch user details:', response.status);
+        return;
+      }
+
+      const userData = await response.json();
+      const hasPremium = userData.user?.isPremium;
+      const remainingTrials = userData.user?.trialCount || 0;
+
+      console.log('TrustInn access check:', {
+        hasPremium,
+        remainingTrials,
+      });
+
+      // Check if user has premium or credits available
+      if (!hasPremium && remainingTrials <= 0) {
+        console.warn('User has no premium subscription and no credits remaining');
+        alert('You need either a Premium subscription or available trial credits to access TrustInn tools.');
+        return;
+      }
+
+      // User has either premium OR credits - proceed with token generation
+      if (hasPremium || remainingTrials > 0) {
+        console.log('Generating token for TrustInn access...');
+
+        // Generate JWT token
+        const tokenResponse = await fetch('/api/auth/generate-token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            expiresIn: '7d',
+          }),
+        });
+
+        if (!tokenResponse.ok) {
+          console.error('Token generation failed:', tokenResponse.status);
+          alert('Failed to generate authentication token. Please try again.');
+          return;
+        }
+
+        const tokenData = await tokenResponse.json();
+        const jwtToken = tokenData.token;
+
+        // Decrement trial if user doesn't have premium
+        if (!hasPremium && remainingTrials > 0) {
+          console.log(`Decrementing trial count: ${remainingTrials} -> ${remainingTrials - 1}`);
+          await fetch('/api/user/me', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+            body: JSON.stringify({
+              trialCount: remainingTrials,
+            }),
+          }).catch(err => console.warn('Failed to decrement trials:', err));
+        }
+
+        // Build TrustInn URL with JWT token
+        const trustInnUrl = new URL('https://trustinn.nitminer.com/tools');
+        trustInnUrl.searchParams.append('token', jwtToken);
+
+        console.log('Opening TrustInn in new tab...');
+        // Open in new tab instead of redirecting
+        window.open(trustInnUrl.toString(), '_blank');
+      }
+    } catch (error) {
+      console.error('Error accessing TrustInn:', error);
+      alert('An error occurred while accessing TrustInn. Please try again.');
+    } finally {
+      setRedirecting(false);
+    }
   };
 
   if (loading) {
@@ -211,8 +316,17 @@ export default function UsageTab() {
           </div>
 
           {(!logs || logs.length === 0) ? (
-            <div className="p-6 sm:p-8 text-center">
+            <div className="p-6 sm:p-8 text-center space-y-4 sm:space-y-6">
               <p className="text-gray-600 dark:text-gray-400 font-bold text-sm sm:text-base">No tool usage yet</p>
+              <button
+                onClick={handleTrustInnAccess}
+                disabled={redirecting || status === 'loading'}
+                className="inline-flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-black text-sm sm:text-base transition-all duration-300 transform hover:scale-105 disabled:hover:scale-100"
+                style={{ fontFamily: 'Space Grotesk, sans-serif' }}
+              >
+                <span>🚀</span>
+                {redirecting ? 'Redirecting...' : 'Start Using Tools'}
+              </button>
             </div>
           ) : (
             <>

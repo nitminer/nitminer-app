@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
         id: payment._id.toString(),
         type: 'payment' as const,
         title: 'Payment Processed',
-        description: `Paid ₹${payment.amount} for ${payment.plan}`,
+        description: `Paid ₹${payment.amount} for ${payment.plan || 'Plan'}`,
         timestamp: payment.createdAt,
         status: payment.status === 'success' ? 'success' as const : 'error' as const
       }))

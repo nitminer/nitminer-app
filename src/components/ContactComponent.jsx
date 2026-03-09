@@ -41,7 +41,7 @@ export function ContactComponent() {
         {/* Hero Section */}
         <div className="py-16 md:py-24 bg-blue-600 text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h1 className="text-4xl md:text-5xl font-black mb-6" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black mb-6" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
               Get In Touch
             </h1>
             <p className="text-xl text-blue-100 max-w-2xl mx-auto font-medium">
