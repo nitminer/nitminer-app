@@ -6,7 +6,7 @@ import Link from "next/link";
 // React Icons
 import {
   SiEthereum, SiSolidity, SiPython, SiReact, SiNodedotjs,
-  SiDocker, SiAmazon, SiFlutter, SiTensorflow,
+  SiDocker, SiFlutter, SiTensorflow,
   SiSolana, SiIpfs,
 } from "react-icons/si";
 import { FaCommentDots, FaComment } from "react-icons/fa6";
@@ -197,7 +197,7 @@ const TECHS = [
   { Icon: SiFlutter, name: "Flutter", color: "#02569B" },
   { Icon: SiTensorflow, name: "TensorFlow", color: "#FF6F00" },
   { Icon: SiDocker, name: "Docker", color: "#2496ED" },
-  { Icon: SiAmazon, name: "AWS", color: "#FF9900" },
+  { Icon: SiDocker, name: "AWS", color: "#FF9900" },
   { Icon: SiIpfs, name: "IPFS", color: "#65C2CB" },
   { Icon: SiSolana, name: "Solana", color: "#9945FF" },
 ];
