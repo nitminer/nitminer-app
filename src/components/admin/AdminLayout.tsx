@@ -42,6 +42,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  useEffect(() => {
+    if (status === 'loading') return;
+    if (!session?.user || session.user.role !== 'admin') {
+      router.push('/admin/login');
+    }
+  }, [status, session, router]);
+
   if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F5F1FF] dark:bg-[#0A0A0A]">
@@ -54,7 +61,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   if (status === 'unauthenticated' || session?.user?.role !== 'admin') {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F5F1FF] dark:bg-[#0A0A0A]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-[#3F3351] dark:text-white font-black uppercase tracking-widest text-xs">
+            Redirecting to Admin Login...
+          </span>
+        </div>
+      </div>
+    );
   }
 
   const navigationItems = [
