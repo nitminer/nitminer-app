@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { FiMail, FiLock, FiEye, FiEyeOff, FiArrowRight } from 'react-icons/fi';
 import Link from 'next/link';
 import Image from "next/image"
 import { signIn, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import LoginTypeSelector from './LoginTypeSelector';
 
 export default function LoginComponent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, status } = useSession();
+  const defaultTrustInnRedirect = 'https://trustinn.nitminer.com/tools';
   const [formData, setFormData] = useState({
     email: '',
     username: '',
@@ -21,16 +23,42 @@ export default function LoginComponent() {
   const [success, setSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  const requestedRedirect = searchParams.get('redirect');
+  const redirectTo =
+    !requestedRedirect || requestedRedirect === '/tools' || requestedRedirect === '/trustinn'
+      ? defaultTrustInnRedirect
+      : requestedRedirect;
+  const navigateTo = useCallback((targetPath: string) => {
+    if (typeof window !== 'undefined' && /^https?:\/\//i.test(targetPath)) {
+      window.location.assign(targetPath);
+      return;
+    }
+
+    try {
+      router.replace(targetPath);
+      setTimeout(() => {
+        if (typeof window !== 'undefined' && window.location.pathname === '/login') {
+          window.location.assign(targetPath);
+        }
+      }, 800);
+    } catch (err) {
+      console.warn('Router navigation failed, using window.location:', err);
+      if (typeof window !== 'undefined') {
+        window.location.assign(targetPath);
+      }
+    }
+  }, [router]);
+
   // Check if user is already logged in
   useEffect(() => {
     if (status === 'loading') return; // Still loading
 
     if (session?.user) {
-      // User is already logged in, redirect to dashboard
-      console.log('Session found, redirecting to dashboard:', session.user.email);
-      router.push('/dashboard');
+      // User is already logged in, redirect to intended page
+      console.log('Session found, redirecting to:', redirectTo);
+      navigateTo(redirectTo);
     }
-  }, [session, status, router]);
+  }, [session, status, redirectTo, navigateTo]);
 
   // Initialize Google Auth on component mount
   useEffect(() => {
@@ -43,49 +71,10 @@ export default function LoginComponent() {
     try {
       console.log('[LOGIN] Starting Google login...');
       
-      // Call signIn - it should set the session cookie
-      const result = await signIn('google', {
-        redirect: false,
+      // OAuth should redirect to provider page immediately.
+      await signIn('google', {
+        callbackUrl: `/login?redirect=${encodeURIComponent(redirectTo)}`,
       });
-
-      console.log('[LOGIN] signIn returned:', result);
-
-      if (result?.error) {
-        console.error('[LOGIN] signIn error:', result.error);
-        setError(result.error || 'Google sign-in failed');
-        setIsLoading(false);
-        return;
-      }
-
-      // After successful signIn, the session cookie should be set
-      console.log('[LOGIN] Sign-in successful, checking session...');
-      
-      // Wait longer for session to be available on mobile
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      try {
-        const sessionResponse = await fetch('/api/auth/session');
-        const sessionData = await sessionResponse.json();
-        console.log('[LOGIN] Session check result:', sessionData);
-        
-        if (sessionData?.user?.id) {
-          console.log('[LOGIN] ✅ Session confirmed:', sessionData.user.email);
-          // Session found, use router.push for navigation
-          setTimeout(() => {
-            console.log('[LOGIN] Navigating to dashboard...');
-            router.push('/dashboard');
-          }, 300);
-          return;
-        }
-      } catch (err) {
-        console.log('[LOGIN] Session fetch error:', err);
-      }
-      
-      // If session check fails, still redirect as cookie should be set
-      console.log('[LOGIN] Session check failed, but redirecting anyway');
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 500);
     } catch (err) {
       console.error('[LOGIN] Google login exception:', err);
       setError('Google sign-in failed. Please try again.');
@@ -140,6 +129,7 @@ export default function LoginComponent() {
         ...(loginMode === 'email' ? { email: formData.email } : { username: formData.username }),
         password: formData.password,
         redirect: false, // Don't redirect automatically
+        callbackUrl: redirectTo,
       });
 
       if (result?.error) {
@@ -177,13 +167,9 @@ export default function LoginComponent() {
         
         // Use router.push first, fallback to window.location if needed
         setTimeout(() => {
-          console.log('Redirecting to dashboard now...');
-          try {
-            router.push('/dashboard');
-          } catch (err) {
-            console.warn('Router push failed, using window.location:', err);
-            window.location.href = '/dashboard';
-          }
+          const destination = redirectTo;
+          console.log('Redirecting to:', destination);
+          navigateTo(destination);
         }, 500);
         return;
       }
@@ -426,7 +412,7 @@ export default function LoginComponent() {
 
           {/* Footer */}
           <p className="mt-8 text-center text-gray-600 dark:text-gray-400">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/signup" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-bold transition-colors">
               Sign up here
             </Link>
