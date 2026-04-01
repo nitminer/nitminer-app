@@ -44,7 +44,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   useEffect(() => {
     if (status === 'loading') return;
-    if (!session?.user || session.user.role !== 'admin') {
+    const isAdmin = String(session?.user?.role || '').toLowerCase() === 'admin';
+    if (!session?.user || !isAdmin) {
       router.push('/admin/login');
     }
   }, [status, session, router]);
@@ -60,7 +61,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     );
   }
 
-  if (status === 'unauthenticated' || session?.user?.role !== 'admin') {
+  const isAdmin = String(session?.user?.role || '').toLowerCase() === 'admin';
+  if (status === 'unauthenticated' || !isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F5F1FF] dark:bg-[#0A0A0A]">
         <div className="flex flex-col items-center gap-4">
