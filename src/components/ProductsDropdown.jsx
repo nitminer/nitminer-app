@@ -28,8 +28,6 @@ export function ProductsDropdown({ onTrustInnClick }) {
     <div
       ref={dropdownRef}
       className="relative group"
-      onMouseEnter={() => setIsOpen(true)}
-      onMouseLeave={() => setIsOpen(false)}
     >
       <button
         type="button"
