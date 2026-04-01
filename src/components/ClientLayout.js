@@ -15,6 +15,7 @@ export default function ClientLayout({ children }) {
   const pathname = usePathname();
   const isAdminPage = pathname?.startsWith("/admin");
   const isTrustInnPage = pathname?.startsWith("/trustinn");
+  const isAboutUsPage = pathname === "/about-us";
   
   // Initialize activity tracking
   useActivityTracking();
@@ -39,7 +40,7 @@ export default function ClientLayout({ children }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
-      {!isTrustInnPage && <Header />}
+      {!isTrustInnPage && !isAboutUsPage && <Header />}
       
       <main className="flex-grow">
         {children}
