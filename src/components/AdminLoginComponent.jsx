@@ -19,7 +19,9 @@ export default function AdminLoginComponent() {
 
   useEffect(() => {
     if (status === 'loading') return;
-    if (session?.user?.role === 'admin') router.push('/admin/dashboard');
+    if (String(session?.user?.role || '').toLowerCase() === 'admin') {
+      router.push('/admin/dashboard');
+    }
   }, [session, status, router]);
 
   const handleChange = (e) => {

@@ -10,7 +10,7 @@ export default function AdminRootPage() {
 
   useEffect(() => {
     if (status === 'loading') return;
-    if (session?.user?.role === 'admin') {
+    if (String(session?.user?.role || '').toLowerCase() === 'admin') {
       router.replace('/admin/dashboard');
     } else {
       router.replace('/admin/login');
