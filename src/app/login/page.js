@@ -1,34 +1,42 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, Suspense, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import Header from "@/components/Header";
 import LoginComponent from "@/components/LoginComponent";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, status } = useSession();
-  const [isChecking, setIsChecking] = useState(true);
+  const defaultTrustInnRedirect = 'https://trustinn.nitminer.com/tools';
+
+  const requestedRedirect = searchParams.get('redirect');
+  const redirectTo =
+    !requestedRedirect || requestedRedirect === '/tools' || requestedRedirect === '/trustinn'
+      ? defaultTrustInnRedirect
+      : requestedRedirect;
+
+  const redirectAfterLogin = useCallback((target) => {
+    if (typeof window !== 'undefined' && /^https?:\/\//i.test(target)) {
+      window.location.assign(target);
+      return;
+    }
+    router.replace(target);
+  }, [router]);
 
   useEffect(() => {
     if (status === 'loading') return;
 
     if (status === 'authenticated' && session?.user) {
-      // User is already logged in, redirect based on role
-      if (session.user.role === 'admin') {
-        router.replace('/admin/dashboard');
-      } else {
-        router.replace('/dashboard');
-      }
-    } else {
-      // User is not authenticated
-      setIsChecking(false);
+      // User is already logged in, redirect to intended page
+      redirectAfterLogin(redirectTo);
     }
-  }, [status, session, router]);
+  }, [status, session, redirectTo, redirectAfterLogin]);
 
   // Show loading while checking auth
-  if (isChecking || status === 'loading') {
+  if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-black">
         <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -46,5 +54,17 @@ export default function LoginPage() {
 
       <LoginComponent />
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-black">
+        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   );
 }
