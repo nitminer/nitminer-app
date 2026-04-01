@@ -1,76 +1,78 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { useState } from "react"
-import { FiChevronDown } from "react-icons/fi"
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { FiChevronDown } from "react-icons/fi";
 
 export function AboutUsDropdown() {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const onMouseDown = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", onMouseDown);
+    return () => document.removeEventListener("mousedown", onMouseDown);
+  }, []);
 
   return (
-    <div className="relative group">
-      
+    <div ref={dropdownRef} className="relative group">
       <button
-        className="flex items-center font-bold gap-1 text-gray-700 hover:text-black transition-colors"
-        onMouseEnter={() => setIsOpen(true)}
-        onMouseLeave={() => setIsOpen(false)}
-        style={{ fontFamily: 'var(--font-space-grotesk), sans-serif' }}
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="flex cursor-pointer items-center gap-2 transition hover:text-purple-300"
       >
-        About Us
-        <FiChevronDown size={18} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <span>About Us</span>
+        <FiChevronDown
+          size={16}
+          className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
+        />
       </button>
 
       {isOpen && (
-        <div
-          className="absolute left-0 mt-0 w-48 bg-white border border-gray-200 rounded-lg shadow-lg py-2 z-50"
-          onMouseEnter={() => setIsOpen(true)}
-          onMouseLeave={() => setIsOpen(false)}
-        >
-          <Link
-            href="/about-us"
-            className="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-black transition-colors font-bold text-blue-600"
-            style={{ fontFamily: 'var(--font-space-grotesk), sans-serif' }}
-          >
-            About Us
-          </Link>
-          <Link
-            href="/team"
-            className="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-black transition-colors"
-            style={{ fontFamily: 'var(--font-space-grotesk), sans-serif' }}
-          >
-            Our Team
-          </Link>
-          <Link
-            href="/awards"
-            className="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-black transition-colors"
-            style={{ fontFamily: 'var(--font-space-grotesk), sans-serif' }}
-          >
-            Awards
-          </Link>
-          <Link
-            href="/publications"
-            className="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-black transition-colors"
-            style={{ fontFamily: 'var(--font-space-grotesk), sans-serif' }}
-          >
-            Publications
-          </Link>
-           <Link
-            href="/pricing"
-            className="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-black transition-colors"
-            style={{ fontFamily: 'var(--font-space-grotesk), sans-serif' }}
-          >
-            Pricing
-          </Link>
-          <hr className="my-2 border-gray-200" />
-          <Link
-            href="/downloads"
-            className="block px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-black transition-colors font-bold text-blue-600"
-            style={{ fontFamily: 'var(--font-space-grotesk), sans-serif' }}
-          >
-            📥 Download App
-          </Link>
-        </div>
+        <ul className="absolute left-0 top-full z-50 mt-2 w-44 rounded bg-gray-800 py-2 shadow-lg">
+          <li>
+            <Link
+              href="/team"
+              onClick={() => setIsOpen(false)}
+              className="block border-b border-gray-700 px-4 py-2 pb-2 transition hover:text-purple-300"
+            >
+              Our Team
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/awards"
+              onClick={() => setIsOpen(false)}
+              className="block border-b border-gray-700 px-4 py-2 pb-2 transition hover:text-purple-300"
+            >
+              Awards
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/publications"
+              onClick={() => setIsOpen(false)}
+              className="block border-b border-gray-700 px-4 py-2 pb-2 transition hover:text-purple-300"
+            >
+              Publications
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/pricing"
+              onClick={() => setIsOpen(false)}
+              className="block px-4 py-2 transition hover:text-purple-300"
+            >
+              Pricing
+            </Link>
+          </li>
+        </ul>
       )}
     </div>
-  )
+  );
 }
