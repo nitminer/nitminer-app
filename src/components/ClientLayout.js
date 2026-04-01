@@ -7,7 +7,6 @@ import { Footer } from "@/components/Footer";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import dynamic from "next/dynamic";
-import AdvertiseBanner from "./AdvertiseBanner";
 import { useActivityTracking } from "@/hooks/useActivityTracking";
 
 const UnifiedChatbot = dynamic(() => import("@/components/UnifiedChatbot"), { ssr: false });
@@ -15,6 +14,7 @@ const UnifiedChatbot = dynamic(() => import("@/components/UnifiedChatbot"), { ss
 export default function ClientLayout({ children }) {
   const pathname = usePathname();
   const isAdminPage = pathname?.startsWith("/admin");
+  const isTrustInnPage = pathname?.startsWith("/trustinn");
   
   // Initialize activity tracking
   useActivityTracking();
@@ -39,15 +39,13 @@ export default function ClientLayout({ children }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
+      {!isTrustInnPage && <Header />}
       
-     
-      <Header />
-      
-      <main className="flex-grow pt-20">
+      <main className="flex-grow">
         {children}
       </main>
-      <UnifiedChatbot />
-      <Footer />
+      {!isTrustInnPage && <UnifiedChatbot />}
+      {!isTrustInnPage && <Footer />}
       <ToastContainer theme="light" />
     </div>
   );
