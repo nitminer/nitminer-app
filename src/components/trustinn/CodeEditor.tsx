@@ -8,6 +8,7 @@ interface CodeEditorProps {
   onCodeChange: (code: string) => void;
   onExecute: () => void;
   isExecuting: boolean;
+  terminalOutput?: string;
   toolSelected?: boolean;
   onCompile?: () => void;
   isCompiling?: boolean;
