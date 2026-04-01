@@ -3,8 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import Header from '@/components/Header';
-import { useTheme } from 'next-themes';
 
 // Import new components
 import LanguageTabs from '@/components/tools/LanguageTabs';
@@ -21,7 +19,6 @@ function ToolsContent() {
   const [currentFile, setCurrentFile] = useState(null);
   const [noOfTrails, setNoOfTrails] = useState(5);
   const [hasPremium, setHasPremium] = useState(false);
-  const { theme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [terminalOutputs, setTerminalOutputs] = useState({
     c: '',
@@ -87,7 +84,7 @@ function ToolsContent() {
 
     // If user is not authenticated, redirect to login
     if (!session?.user?.email) {
-      router.push('/login');
+      router.push('/login?redirect=/trustinn');
       return;
     }
 
@@ -1028,26 +1025,45 @@ contract RIAS {
         <div className="fixed inset-0 bg-slate-950 flex items-center justify-center z-50">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-gray-400">Loading...</p>
+            <p className="text-gray-300">Loading...</p>
           </div>
         </div>
       )}
-      
-      <div className={`min-h-screen ${!mounted ? 'bg-slate-900' : theme === 'dark' ? 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950' : 'bg-gradient-to-br from-slate-50 via-white to-slate-100'} font-['Geist',system-ui,sans-serif] ${!isAuthChecked ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}>
-      {/* Ambient background effects */}
-      {mounted && theme === 'dark' && (
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/4 -left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-1/4 -right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-          <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+
+      <div className={`min-h-screen bg-white text-black ${!isAuthChecked ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}>
+        <div className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-slate-200">
+          <div className="mx-auto w-full max-w-[1800px] px-4 md:px-8 py-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-slate-900 to-slate-700 text-white flex items-center justify-center font-bold text-sm">
+                TI
+              </div>
+              <div>
+                <p className="text-sm md:text-base font-semibold text-black">TrustInn Tools</p>
+                <p className="text-xs text-slate-500">Security Analysis Workspace</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 md:gap-3">
+              <button
+                onClick={handleProfileClick}
+                className="px-3 py-1.5 rounded-lg text-xs md:text-sm border border-slate-300 bg-white text-black hover:bg-slate-100 transition-colors"
+              >
+                {firstName || email || 'Profile'}
+              </button>
+              <span className="px-3 py-1.5 rounded-lg text-xs md:text-sm bg-slate-100 text-slate-700 border border-slate-200">
+                {hasPremium ? 'Premium' : `Trials: ${noOfTrails}`}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="px-3 py-1.5 rounded-lg text-xs md:text-sm bg-black text-white hover:bg-slate-800 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
         </div>
-      )}
 
-      {/* Header */}
-      <Header />
-
-      {mounted && (
-      <div className="relative z-10 px-15">
+        {mounted && (
+      <div className="relative z-10 mx-auto w-full max-w-[1800px] px-4 md:px-8 py-4 md:py-6">
         {/* Language Tabs */}
         <LanguageTabs 
           languages={languages}
@@ -1059,10 +1075,10 @@ contract RIAS {
           {/* Left Panel - Controls */}
           <div className="space-y-1 overflow-auto md:order-1 order-1" style={{ maxHeight: 'calc(85vh - 100px)' }}>
             {/* File Selection Card */}
-            <div className={`rounded-xl shadow-sm border p-3 md:p-2 transition-all ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`} id="file-upload">
+            <div className="rounded-xl shadow-sm border p-3 md:p-2 transition-all bg-white border-slate-200" id="file-upload">
               <div className="flex items-center mb-5">
                 <i className="fas fa-file-upload text-blue-500 mr-3 text-xl"></i>
-                <h3 className={`text-sm md:text-md font-bold md:text-xl ${theme === 'dark' ? 'text-slate-100' : 'text-gray-900'}`}>File Selection</h3>
+                <h3 className="text-sm md:text-md font-bold md:text-xl text-black">File Selection</h3>
               </div>
               <div className="space-y-2">
                 <div className="flex gap-3">
@@ -1071,7 +1087,7 @@ contract RIAS {
                     value={currentFile?.type === currentTab ? currentFile.file.name : ''}
                     readOnly
                     placeholder={`Select ${currentTab} file...`}
-                    className={`flex-1 px-4 py-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all ${theme === 'dark' ? 'bg-slate-700 border-slate-600 text-slate-100 placeholder-slate-400' : 'bg-white border-slate-300 text-black placeholder-slate-500'}`}
+                    className="flex-1 px-4 py-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all bg-white border-slate-300 text-black placeholder-slate-500"
                   />
                   <button
                     onClick={() => browseFile(currentTab)}
@@ -1115,14 +1131,14 @@ contract RIAS {
             </div>
 
             {/* Tool Selection Card */}
-            <div className={`rounded-xl shadow-sm border p-3 md:p-2 transition-all ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`} id="tool-config-section">
+            <div className="rounded-xl shadow-sm border p-3 md:p-2 transition-all bg-white border-slate-200" id="tool-config-section">
               <div className="flex items-center mb-2">
                 <i className="fas fa-tools text-blue-500 mr-3 text-xl"></i>
-                <h3 className={`text-sm md:text-md font-bold md:text-2xl ${theme === 'dark' ? 'text-slate-100' : 'text-gray-900'}`}>Tool Configuration</h3>
+                <h3 className="text-sm md:text-md font-bold md:text-2xl text-black">Tool Configuration</h3>
               </div>
               <div className="space-y-2">
                 <div id="tool-select">
-                  <label className={`block text-xs md:text-md font-medium mb-2 ${theme === 'dark' ? 'text-slate-300' : 'text-gray-700'}`}>Security Tool:</label>
+                  <label className="block text-xs md:text-md font-medium mb-2 text-slate-700">Security Tool:</label>
                   <select
                     value={currentTab === 'c' ? cTool : currentTab === 'java' ? javaTool : currentTab === 'python' ? pythonTool : solidityTool}
                     onChange={(e) => {
@@ -1131,7 +1147,7 @@ contract RIAS {
                       else if (currentTab === 'python') setPythonTool(e.target.value);
                       else setSolidityTool(e.target.value);
                     }}
-                    className={`w-full px-1 py-5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all ${theme === 'dark' ? 'bg-slate-700 border-slate-600 text-slate-100' : 'bg-white border-slate-300 text-black'}`}
+                    className="w-full px-1 py-5 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all bg-white border-slate-300 text-black"
                   >
                     <option value="">Select a tool</option>
                     {currentTab === 'c' && (
@@ -1165,25 +1181,25 @@ contract RIAS {
 
                 {/* Tool-specific parameters */}
                 {currentTab === 'c' && cTool === 'Condition Satisfiability Analysis' && (
-                  <div className={`p-1 rounded-lg border transition-all ${mounted && theme === 'dark' ? 'bg-slate-700 border-slate-600' : mounted && theme === 'light' ? 'bg-blue-50 border-blue-200' : 'bg-slate-700'}`} id="tool-params">
-                    <label className={`block text-sm font-medium mb-2 ${mounted && theme === 'dark' ? 'text-slate-300' : 'text-gray-700'}`}>Unwind Bound:</label>
+                  <div className="p-1 rounded-lg border transition-all bg-blue-50 border-blue-200" id="tool-params">
+                    <label className="block text-sm font-medium mb-2 text-gray-700">Unwind Bound:</label>
                     <input
                       type="number"
                       value={cbmcBound}
                       onChange={(e) => setCbmcBound(e.target.value)}
                       placeholder="Enter unwind bound value"
-                      className={`w-full px-1 py-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all ${mounted && theme === 'dark' ? 'bg-slate-600 border-slate-500 text-slate-100 placeholder-slate-400' : mounted && theme === 'light' ? 'bg-white border-slate-300 text-black placeholder-slate-500' : 'bg-slate-600 text-slate-100'}`}
+                      className="w-full px-1 py-1 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all bg-white border-slate-300 text-black placeholder-slate-500"
                     />
                   </div>
                 )}
 
                 {currentTab === 'c' && cTool === 'DSE based Mutation Analyser' && (
-                  <div className={`p-4 rounded-lg border transition-all ${mounted && theme === 'dark' ? 'bg-slate-700 border-slate-600' : mounted && theme === 'light' ? 'bg-blue-50 border-blue-200' : 'bg-slate-700'}`}>
-                    <label className={`block text-sm font-medium mb-2 ${mounted && theme === 'dark' ? 'text-slate-300' : 'text-gray-700'}`}>Tool Value:</label>
+                  <div className="p-4 rounded-lg border transition-all bg-blue-50 border-blue-200">
+                    <label className="block text-sm font-medium mb-2 text-gray-700">Tool Value:</label>
                     <select
                       value={kleemaValue}
                       onChange={(e) => setKleemaValue(e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all ${mounted && theme === 'dark' ? 'bg-slate-600 border-slate-500 text-slate-100' : mounted && theme === 'light' ? 'bg-white border-slate-300 text-black' : 'bg-slate-600 text-slate-100'}`}
+                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all bg-white border-slate-300 text-black"
                     >
                       <option value="1">1</option>
                       <option value="2">2</option>
@@ -1193,13 +1209,13 @@ contract RIAS {
                 )}
 
                 {currentTab === 'c' && (cTool === 'Advance Code Coverage Profiler' || cTool === 'Mutation Testing Profiler') && (
-                  <div className={`p-4 rounded-lg border space-y-3 transition-all ${mounted && theme === 'dark' ? 'bg-slate-700 border-slate-600' : mounted && theme === 'light' ? 'bg-blue-50 border-blue-200' : 'bg-slate-700'}`}>
+                  <div className="p-4 rounded-lg border space-y-3 transition-all bg-blue-50 border-blue-200">
                     <div>
-                      <label className={`block text-sm font-medium mb-2 ${mounted && theme === 'dark' ? 'text-slate-300' : 'text-gray-700'}`}>Version:</label>
+                      <label className="block text-sm font-medium mb-2 text-gray-700">Version:</label>
                       <select
                         value={cTool === 'Advance Code Coverage Profiler' ? gmcovVersion : gmutantVersion}
                         onChange={(e) => cTool === 'Advance Code Coverage Profiler' ? setGmcovVersion(e.target.value) : setGmutantVersion(e.target.value)}
-                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all ${mounted && theme === 'dark' ? 'bg-slate-600 border-slate-500 text-slate-100' : mounted && theme === 'light' ? 'bg-white border-slate-300 text-black' : 'bg-slate-600 text-slate-100'}`}
+                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all bg-white border-slate-300 text-black"
                       >
                         {[1,2,3,4,5].map(num => (
                           <option key={num} value={num}>{num}</option>
@@ -1207,25 +1223,25 @@ contract RIAS {
                       </select>
                     </div>
                     <div>
-                      <label className={`block text-sm font-medium mb-2 ${mounted && theme === 'dark' ? 'text-slate-300' : 'text-gray-700'}`}>Time Bound (seconds):</label>
+                      <label className="block text-sm font-medium mb-2 text-gray-700">Time Bound (seconds):</label>
                       <input
                         type="number"
                         value={cTool === 'Advance Code Coverage Profiler' ? gmcovTimebound : gmutantTimebound}
                         onChange={(e) => cTool === 'Advance Code Coverage Profiler' ? setGmcovTimebound(e.target.value) : setGmutantTimebound(e.target.value)}
                         placeholder="Enter time bound"
-                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all ${mounted && theme === 'dark' ? 'bg-slate-600 border-slate-500 text-slate-100 placeholder-slate-400' : mounted && theme === 'light' ? 'bg-white border-slate-300 text-black placeholder-slate-500' : 'bg-slate-600 text-slate-100'}`}
+                        className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all bg-white border-slate-300 text-black placeholder-slate-500"
                       />
                     </div>
                   </div>
                 )}
 
                 {currentTab === 'solidity' && solidityTool === 'VeriSol' && (
-                  <div className={`p-4 rounded-lg border transition-all ${mounted && theme === 'dark' ? 'bg-slate-700 border-slate-600' : mounted && theme === 'light' ? 'bg-blue-50 border-blue-200' : 'bg-slate-700'}`}>
-                    <label className={`block text-sm font-medium mb-2 ${mounted && theme === 'dark' ? 'text-slate-300' : 'text-gray-700'}`}>Verification Mode:</label>
+                  <div className="p-4 rounded-lg border transition-all bg-blue-50 border-blue-200">
+                    <label className="block text-sm font-medium mb-2 text-gray-700">Verification Mode:</label>
                     <select
                       value={solidityMode}
                       onChange={(e) => setSolidityMode(e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all ${mounted && theme === 'dark' ? 'bg-slate-600 border-slate-500 text-slate-100' : mounted && theme === 'light' ? 'bg-white border-slate-300 text-black' : 'bg-slate-600 text-slate-100'}`}
+                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm transition-all bg-white border-slate-300 text-black"
                     >
                       <option value="bmc">Bounded Model Checker</option>
                       <option value="chc">Constrained Horn Clauses</option>
@@ -1237,11 +1253,11 @@ contract RIAS {
           </div>
 
           {/* Right Panel - Terminal Output (scrollable only) */}
-          <div className={`rounded-xl shadow-sm border overflow-scroll flex flex-col transition-all md:order-2 order-2 ${theme === 'dark' ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'}`} id="terminal-output" style={{ height: 'calc(96vh - 100px)' }}>
-            <div className={`p-3 md:p-6 border-b flex justify-between items-center flex-shrink-0 flex-col md:flex-row gap-3 md:gap-0 ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
+          <div className="rounded-xl shadow-sm border overflow-scroll flex flex-col transition-all md:order-2 order-2 bg-white border-slate-200" id="terminal-output" style={{ height: 'calc(96vh - 100px)' }}>
+            <div className="p-3 md:p-6 border-b flex justify-between items-center flex-shrink-0 flex-col md:flex-row gap-3 md:gap-0 border-slate-200">
               <div className="flex items-center">
                 <i className="fas fa-terminal text-green-500 mr-3 text-lg md:text-xl"></i>
-                <h3 className={`text-lg md:text-xl font-bold ${theme === 'dark' ? 'text-slate-100' : 'text-gray-900'}`}>Terminal Output</h3>
+                <h3 className="text-lg md:text-xl font-bold text-black">Terminal Output</h3>
               </div>
               <div className="flex space-x-2 md:space-x-3 w-full md:w-auto flex-wrap md:flex-nowrap">
                 <button
@@ -1271,9 +1287,9 @@ contract RIAS {
               </div>
             </div>
             <div className="p-6">
-              <div className={`rounded-lg border shadow-inner overflow-hidden transition-all ${mounted && theme === 'dark' ? 'bg-slate-950 border-slate-700' : mounted && theme === 'light' ? 'bg-slate-50 border-slate-300' : 'bg-slate-950'}`} style={{ height: '700px' }}>
+              <div className="rounded-lg border shadow-inner overflow-hidden transition-all bg-slate-950 border-slate-700" style={{ height: '700px' }}>
                 <div className="p-4 h-full overflow-y-auto">
-                  <pre className={`font-mono text-sm whitespace-pre-wrap leading-relaxed ${mounted && theme === 'dark' ? 'text-green-400' : mounted && theme === 'light' ? 'text-green-700' : 'text-green-400'}`}>
+                  <pre className="font-mono text-sm whitespace-pre-wrap leading-relaxed text-green-400">
                     {terminalOutputs[currentTab] || 'Terminal output will appear here...\n\nReady to execute security analysis tools.'}
                   </pre>
                 </div>
@@ -1307,28 +1323,6 @@ contract RIAS {
         onClose={() => setShowVisualizationModal(false)}
         onDownload={downloadChart}
       />
-
-      <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-
-        @keyframes slideDown {
-          from {
-            opacity: 0;
-            transform: translateY(-20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
       </div>
     </>
   );
