@@ -1159,6 +1159,14 @@ export default function ToolsContent() {
 
   const terminalOutput = getFilteredTerminalOutput(currentTab, terminalOutputs[currentTab] || '');
   const terminalLines  = terminalOutput.split('\n');
+  const officialNavLinks = [
+    { label: 'Home', href: '/' },
+    { label: 'About Us', href: '/about-us' },
+    { label: 'Services', href: '/services' },
+    { label: 'Gallery', href: '/gallery' },
+    { label: 'Contact', href: '/contact' },
+    { label: 'Download', href: '/downloads' },
+  ];
 
   // ─── Shared style helpers ──────────────────────────────────────────────────
   const S = {
@@ -1202,21 +1210,28 @@ export default function ToolsContent() {
       `}</style>
 
       {/* ── Header ── */}
-      <header style={{ height:'clamp(50px, 8vh, 70px)', borderBottom:'1.5px solid #e5e7eb', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 clamp(12px, 4vw, 24px)', background:'#ffffff', boxShadow:'0 1px 8px rgba(0,0,0,0.06)', flexShrink:0, zIndex:10 }}>
+      <header style={{ minHeight:'clamp(58px, 9vh, 78px)', borderBottom:'1px solid #6b21a8', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px clamp(12px, 4vw, 24px)', background:'#030712', boxShadow:'0 8px 24px rgba(0,0,0,0.25)', flexShrink:0, zIndex:10, gap:12, flexWrap:'wrap' }}>
         <div style={{display:'flex',alignItems:'center',gap:'clamp(6px, 2vw, 12px)'}}>
-          <img src="/logo.png" alt="TrustInn" style={{height:'clamp(28px, 5vh, 40px)',width:'auto'}} onError={(e:any) => { e.target.style.display='none'; }}/>
+          <img src="/images/Logo/logo.png" alt="NITMiner" style={{height:'clamp(30px, 5vh, 44px)',width:'auto'}} onError={(e:any) => { e.target.style.display='none'; }}/>
           <div>
-            <div style={{fontSize:'clamp(12px, 2.5vw, 16px)',fontWeight:800,letterSpacing:'-0.03em',color:'#111827'}}>TrustInn</div>
-            <div style={{fontSize:'clamp(8px, 1.8vw, 11px)',color:'#9ca3af'}}>NITMiner Technologies Pvt Ltd</div>
+            <div style={{fontSize:'clamp(14px, 2.5vw, 20px)',fontWeight:800,letterSpacing:'0.02em',color:'#ffffff'}}>NITMiner</div>
+            <div style={{fontSize:'clamp(9px, 1.8vw, 11px)',color:'#d8b4fe'}}>TrustInn Workspace</div>
           </div>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:18,flexWrap:'wrap',justifyContent:'center'}}>
+          {officialNavLinks.map((item) => (
+            <a key={item.href} href={item.href} style={{color:'#f3f4f6',textDecoration:'none',fontSize:13,fontWeight:500,transition:'color 0.15s'}}>
+              {item.label}
+            </a>
+          ))}
         </div>
         {isAuthenticated && user && (
           <div style={{display:'flex',alignItems:'center',gap:8}}>
-            <button onClick={() => setShowTour(true)} style={{...S.btn('#eef2ff','#4f46e5'), border:'1.5px solid #c7d2fe'}}>? Tour</button>
-            <button onClick={() => setShowSessionModal(true)} style={{...S.btn('linear-gradient(135deg,#6366f1,#8b5cf6)')}}>Session Info</button>
+            <button onClick={() => setShowTour(true)} style={{...S.btn('#111827','#e5e7eb'), border:'1px solid #374151'}}>? Tour</button>
+            <button onClick={() => setShowSessionModal(true)} style={{...S.btn('linear-gradient(135deg,#7e22ce,#9333ea)')}}>Session Info</button>
             <button
               onClick={() => redirectToNitMiner('/dashboard')}
-              style={{width:36,height:36,borderRadius:'50%',background:'linear-gradient(135deg,#6366f1,#3b82f6)',border:'none',color:'#fff',fontSize:14,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 10px rgba(99,102,241,0.3)',padding:0}}
+              style={{width:36,height:36,borderRadius:'50%',background:'linear-gradient(135deg,#7e22ce,#4f46e5)',border:'1px solid #a855f7',color:'#fff',fontSize:14,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 10px rgba(126,34,206,0.4)',padding:0}}
             >
               <FaUser size={16} />
             </button>
