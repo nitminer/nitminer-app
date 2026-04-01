@@ -894,7 +894,7 @@ contract RIAS {
     }
   };
 
-  const showSampleCode = (type) => {
+  const showSampleCode = async (type) => {
     let tool = '';
     if (type === 'c') {
       tool = cTool;
@@ -911,6 +911,57 @@ contract RIAS {
       return;
     }
 
+    const cToolMap = {
+      'Condition Satisfiability Analysis': 'CBMC',
+      'DSE based Mutation Analyser': 'KLEEMA',
+      'Dynamic Symbolic Execution': 'KLEE',
+      'Dynamic Symbolic Execution with Pruning': 'TX',
+      'Advance Code Coverage Profiler': 'gMCov',
+      'Mutation Testing Profiler': 'gMutant',
+    };
+
+    const toolForAPI =
+      type === 'c'
+        ? cToolMap[tool] || tool
+        : type === 'java'
+          ? 'JBMC'
+          : type === 'python'
+            ? 'Condition Coverage Fuzzing'
+            : 'VeriSol';
+
+    try {
+      const response = await fetch(
+        `/api/sample-programs?tool=${encodeURIComponent(toolForAPI)}&language=${encodeURIComponent(type)}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        const apiSamplesObj = data?.samples || {};
+        const apiSamples = Object.keys(apiSamplesObj).map((name) => ({
+          name,
+          content: apiSamplesObj[name],
+        }));
+
+        if (apiSamples.length > 0) {
+          if (apiSamples.length === 1) {
+            const sample = apiSamples[0];
+            const blob = new Blob([sample.content], { type: 'text/plain' });
+            const file = new File([blob], sample.name, { type: 'text/plain' });
+            setCurrentFile({ type, file });
+            alert(`Sample code loaded! File: ${sample.name}\nYou can now execute the command.`);
+            return;
+          }
+
+          setSamplesList(apiSamples);
+          setSamplesListTitle(tool);
+          setShowSamplesListModal(true);
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn('Could not fetch backup sample programs, falling back to local samples:', error);
+    }
+
+    // Fallback to local in-file sample map
     const samples = samplePrograms[type]?.[tool];
     if (!samples || samples.length === 0) {
       alert('No sample programs available for this tool');
@@ -923,11 +974,12 @@ contract RIAS {
       const file = new File([blob], sample.name, { type: 'text/plain' });
       setCurrentFile({ type, file });
       alert(`Sample code loaded! File: ${sample.name}\nYou can now execute the command.`);
-    } else {
-      setSamplesList(samples);
-      setSamplesListTitle(tool);
-      setShowSamplesListModal(true);
+      return;
     }
+
+    setSamplesList(samples);
+    setSamplesListTitle(tool);
+    setShowSamplesListModal(true);
   };
 
   const selectSample = (sample) => {
